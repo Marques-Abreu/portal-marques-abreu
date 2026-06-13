@@ -31,6 +31,7 @@
     <div class="kpi-grid kpi-grid-4">
       <div class="kpi-card"><div class="kpi-label">Imóveis Angariados</div><div class="kpi-value" id="kpi-angariados">0</div></div>
       <div class="kpi-card"><div class="kpi-label">Vendas Concluídas</div><div class="kpi-value" id="kpi-vendas">0</div></div>
+      <div class="kpi-card"><div class="kpi-label">Negócios Perdidos</div><div class="kpi-value" id="kpi-perdidos">0</div></div>
       <div class="kpi-card"><div class="kpi-label">Visitas Marcadas</div><div class="kpi-value" id="kpi-visitas-marc">0</div></div>
       <div class="kpi-card"><div class="kpi-label">Visitas Realizadas</div><div class="kpi-value" id="kpi-visitas-real">0</div></div>
       <div class="kpi-card"><div class="kpi-label">Receita Agência (€) — Total</div><div class="kpi-value" id="kpi-receita">0 €</div></div>
@@ -823,6 +824,8 @@ function renderDashboard(){
   const totalAngariados = deals.length;
   const vendidos = deals.filter(d=>d.status==='Vendido');
   const totalVendas = vendidos.length;
+  const perdidos = deals.filter(d=>d.status==='Perdido');
+  const totalPerdidos = perdidos.length;
   const visitasMarc = deals.reduce((s,d)=>s+(d.visitas_marc||0),0);
   const visitasReal = deals.reduce((s,d)=>s+(d.visitas_real||0),0);
   const receita = vendidos.reduce((s,d)=>s+comissaoAgencia(d),0);
@@ -833,6 +836,7 @@ function renderDashboard(){
 
   document.getElementById('kpi-angariados').textContent = totalAngariados;
   document.getElementById('kpi-vendas').textContent = totalVendas;
+  document.getElementById('kpi-perdidos').textContent = totalPerdidos;
   document.getElementById('kpi-visitas-marc').textContent = visitasMarc;
   document.getElementById('kpi-visitas-real').textContent = visitasReal;
   document.getElementById('kpi-receita').textContent = eur(receita);
@@ -878,7 +882,8 @@ function renderDashboard(){
   const origemStats = origensList.map(o=>{
     const ang = deals.filter(d=>d.origem===o.nome);
     const ven = ang.filter(d=>d.status==='Vendido');
-    return {origem:o.nome, angariados:ang.length, vendidos:ven.length, taxa: ang.length? ven.length/ang.length : 0};
+    const perd = ang.filter(d=>d.status==='Perdido');
+    return {origem:o.nome, angariados:ang.length, vendidos:ven.length, perdidos:perd.length, taxa: ang.length? ven.length/ang.length : 0};
   });
   document.getElementById('tbl-origem').innerHTML = origemStats.map(s=>
     `<tr><td>${esc(s.origem)}</td><td class="num">${s.angariados}</td><td class="num">${s.vendidos}</td><td class="num">${pct(s.taxa)}</td></tr>`
@@ -931,7 +936,8 @@ function renderDashboard(){
     labels: origemStats.map(s=>s.origem),
     datasets:[
       {label:'Angariados', data: origemStats.map(s=>s.angariados), backgroundColor: origemStats.map((s,i)=>lightenColor(colorForIndex(i), 0.55))},
-      {label:'Vendidos', data: origemStats.map(s=>s.vendidos), backgroundColor: origemStats.map((s,i)=>colorForIndex(i))}
+      {label:'Vendidos', data: origemStats.map(s=>s.vendidos), backgroundColor: origemStats.map((s,i)=>colorForIndex(i))},
+      {label:'Perdidos', data: origemStats.map(s=>s.perdidos), backgroundColor:'#000000'}
     ]
   },{
     plugins:{
@@ -939,7 +945,8 @@ function renderDashboard(){
         labels:{
           generateLabels: () => [
             {text:'Tom claro = Angariado', fillStyle:'#9ca3af', strokeStyle:'#9ca3af', lineWidth:0},
-            {text:'Tom escuro = Vendido', fillStyle:'#4b5563', strokeStyle:'#4b5563', lineWidth:0}
+            {text:'Tom escuro = Vendido', fillStyle:'#4b5563', strokeStyle:'#4b5563', lineWidth:0},
+            {text:'Preto = Perdido', fillStyle:'#000000', strokeStyle:'#000000', lineWidth:0}
           ]
         }
       }
@@ -956,13 +963,25 @@ function renderDashboard(){
   });
 
   // Insights automáticos
-  renderInsights({totalAngariados, totalVendas, visitasMarc, visitasReal, receita, liquidoTotal, origemStats, agenteStats, mesesOrdenados, mensalMap});
+  renderInsights({totalAngariados, totalVendas, totalPerdidos, visitasMarc, visitasReal, receita, liquidoTotal, origemStats, agenteStats, mesesOrdenados, mensalMap});
 }
 
 // ---------- Insights automáticos (regras, sem IA externa) ----------
 function gerarInsights(ctx){
-  const {totalAngariados, totalVendas, visitasMarc, visitasReal, receita, liquidoTotal, origemStats, agenteStats, mesesOrdenados, mensalMap} = ctx;
+  const {totalAngariados, totalVendas, totalPerdidos, visitasMarc, visitasReal, receita, liquidoTotal, origemStats, agenteStats, mesesOrdenados, mensalMap} = ctx;
   const insights = [];
+
+  // Negócios perdidos
+  if(totalPerdidos > 0){
+    const taxaPerdidos = totalAngariados? totalPerdidos/totalAngariados : 0;
+    insights.push({tipo:'alerta', texto:`${totalPerdidos} negócio(s) foram marcados como perdidos (${pct(taxaPerdidos)} do total angariado). Vale a pena analisar os motivos de perda para melhorar o processo comercial.`});
+    const origemPiorPerdas = origemStats.filter(o=>o.perdidos>0).reduce((a,b)=> !a || b.perdidos>a.perdidos ? b : a, null);
+    if(origemPiorPerdas){
+      insights.push({tipo:'sugestao', texto:`A origem "${origemPiorPerdas.origem}" tem ${origemPiorPerdas.perdidos} negócio(s) perdido(s), o maior número entre as origens. Vale a pena rever a qualificação dos leads desta origem.`});
+    }
+  } else if(totalAngariados > 0){
+    insights.push({tipo:'positivo', texto:'Não há negócios perdidos registados até agora.'});
+  }
 
   // Conversão Visitas Realizadas -> Vendas
   if(visitasReal > 0){

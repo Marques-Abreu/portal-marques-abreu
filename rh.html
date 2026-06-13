@@ -176,11 +176,28 @@ async function loadAll(){
 const form = document.getElementById('func-form');
 form.addEventListener('submit', async (e)=>{
   e.preventDefault();
+
+  const dataNascimento = document.getElementById('f-data-nascimento').value || null;
+  const dataContratacao = document.getElementById('f-data-contratacao').value || null;
+
+  if(dataNascimento){
+    const idade = calcIdade(dataNascimento);
+    if(idade!=null && idade < 18){
+      alert('A idade não pode ser inferior a 18 anos');
+      return;
+    }
+  }
+
+  if(dataNascimento && dataContratacao && dataContratacao < dataNascimento){
+    alert('A idade de contratação não pode ser inferior à idade de nascimento');
+    return;
+  }
+
   const payload = {
     nome: document.getElementById('f-nome').value.trim(),
     bi: document.getElementById('f-bi').value.trim() || null,
-    data_nascimento: document.getElementById('f-data-nascimento').value || null,
-    data_contratacao: document.getElementById('f-data-contratacao').value || null,
+    data_nascimento: dataNascimento,
+    data_contratacao: dataContratacao,
     tipo_contrato: document.getElementById('f-tipo-contrato').value || null,
     cargo: document.getElementById('f-cargo').value,
     ativo: document.getElementById('f-ativo').value === 'true'
