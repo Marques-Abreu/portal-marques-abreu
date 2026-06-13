@@ -38,7 +38,7 @@
     }
   ];
 
-  if(profile.role === 'admin'){
+  if(profile.role === 'admin' || profile.role === 'editor'){
     modules.push({
       icon:'🔐', title:'Utilizadores e Permissões', href:'utilizadores.html',
       desc:'Gestão de contas, acessos e permissões do portal.', tag:'Admin'
