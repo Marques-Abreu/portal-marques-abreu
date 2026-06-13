@@ -106,7 +106,7 @@
         </table>
       </div>
     </div>
-    <div class="card">
+    <div class="card card-wide">
       <h2>Comissões por Direção Comercial</h2>
       <div class="scroll-x">
         <table>
@@ -829,6 +829,17 @@ function renderDashboard(){
       {label:'Angariados', data: origemStats.map(s=>s.angariados), backgroundColor: origemStats.map((s,i)=>lightenColor(colorForIndex(i), 0.55))},
       {label:'Vendidos', data: origemStats.map(s=>s.vendidos), backgroundColor: origemStats.map((s,i)=>colorForIndex(i))}
     ]
+  },{
+    plugins:{
+      legend:{
+        labels:{
+          generateLabels: () => [
+            {text:'Tom claro = Angariado', fillStyle:'#9ca3af', strokeStyle:'#9ca3af', lineWidth:0},
+            {text:'Tom escuro = Vendido', fillStyle:'#4b5563', strokeStyle:'#4b5563', lineWidth:0}
+          ]
+        }
+      }
+    }
   });
   drawChart('chartFunil','bar',{
     labels:['Visitas Marcadas','Visitas Realizadas','Vendas'],
