@@ -319,6 +319,22 @@ function pct(v){
 function esc(s){
   return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+
+// Paleta de cores para gráficos com cores distintas por comercial/origem
+const CHART_PALETTE = ['#9c1c2e','#2563a8','#b45309','#15803d','#7c3aed','#0891b2','#be185d','#65a30d','#ea580c','#0f766e','#854d0e','#4338ca'];
+function colorForIndex(i){
+  return CHART_PALETTE[i % CHART_PALETTE.length];
+}
+function lightenColor(hex, percent){
+  hex = hex.replace('#','');
+  const r = parseInt(hex.substring(0,2),16);
+  const g = parseInt(hex.substring(2,4),16);
+  const b = parseInt(hex.substring(4,6),16);
+  const nr = Math.round(r + (255-r)*percent);
+  const ng = Math.round(g + (255-g)*percent);
+  const nb = Math.round(b + (255-b)*percent);
+  return `rgb(${nr},${ng},${nb})`;
+}
 function comissaoAgencia(d){ return (d.preco||0) * (d.comissao_pct||0) / 100; }
 function valorAngariador(d){ return comissaoAgencia(d) * (d.angariador_pct||0) / 100; }
 function valorVendedor(d){ return comissaoAgencia(d) * (d.vendedor_pct||0) / 100; }
@@ -798,7 +814,7 @@ function renderDashboard(){
   // Charts
   drawChart('chartAgentes','bar',{
     labels: agenteStats.map(s=>s.nome),
-    datasets:[{label:'Comissão (€)', data: agenteStats.map(s=>Math.round(s.comissao*100)/100), backgroundColor:'#9c1c2e'}]
+    datasets:[{label:'Comissão (€)', data: agenteStats.map(s=>Math.round(s.comissao*100)/100), backgroundColor: agenteStats.map((s,i)=>colorForIndex(i))}]
   });
   drawChart('chartDC','bar',{
     labels: dcStats.map(s=>s.nome),
@@ -810,8 +826,8 @@ function renderDashboard(){
   drawChart('chartOrigem','bar',{
     labels: origemStats.map(s=>s.origem),
     datasets:[
-      {label:'Angariados', data: origemStats.map(s=>s.angariados), backgroundColor:'#d8b4be'},
-      {label:'Vendidos', data: origemStats.map(s=>s.vendidos), backgroundColor:'#9c1c2e'}
+      {label:'Angariados', data: origemStats.map(s=>s.angariados), backgroundColor: origemStats.map((s,i)=>lightenColor(colorForIndex(i), 0.55))},
+      {label:'Vendidos', data: origemStats.map(s=>s.vendidos), backgroundColor: origemStats.map((s,i)=>colorForIndex(i))}
     ]
   });
   drawChart('chartFunil','bar',{
@@ -821,7 +837,7 @@ function renderDashboard(){
   const origemVendasNonZero = origemStats.filter(s=>s.vendidos>0);
   drawChart('chartOrigemPie','doughnut',{
     labels: origemVendasNonZero.map(s=>s.origem),
-    datasets:[{data: origemVendasNonZero.map(s=>s.vendidos), backgroundColor:['#9c1c2e','#c0263b','#b45309','#15803d','#74121f','#d8b4be','#8a7479']}]
+    datasets:[{data: origemVendasNonZero.map(s=>s.vendidos), backgroundColor: origemVendasNonZero.map(s=>colorForIndex(origemStats.findIndex(o=>o.origem===s.origem)))}]
   });
 
   // Insights automáticos
