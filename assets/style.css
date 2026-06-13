@@ -166,6 +166,14 @@ button:disabled{opacity:.5;cursor:not-allowed;}
 /* ---------- Misc widgets ---------- */
 .visit-row{display:flex;align-items:center;gap:3px;white-space:nowrap;font-size:12px;margin-bottom:3px;}
 .visit-row:last-child{margin-bottom:0;}
+
+.dc-stack{display:flex;flex-direction:column;gap:4px;min-width:120px;}
+.dc-row{display:flex;align-items:center;gap:6px;font-size:12px;white-space:nowrap;}
+.dc-tag{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.02em;padding:2px 6px;border-radius:8px;color:#fff;text-align:center;min-width:40px;flex-shrink:0;}
+.dc-tag-ang{background:var(--primary);}
+.dc-tag-venda{background:var(--green);}
+.dc-nome{overflow:hidden;text-overflow:ellipsis;}
+.dc-pct{color:var(--muted);font-size:11px;margin-left:auto;padding-left:4px;}
 .btn-tiny{background:#f1e7e9;color:var(--text);border:none;width:20px;height:20px;border-radius:4px;cursor:pointer;font-size:13px;font-weight:bold;padding:0;line-height:1;}
 .btn-tiny:hover{background:#e8d7da;}
 .status-select{padding:4px 6px;border-radius:6px;border:1px solid var(--border);font-size:12px;font-weight:bold;font-family:inherit;cursor:pointer;}
