@@ -138,8 +138,12 @@
           <input type="text" id="f-tipologia" placeholder="Ex: T2">
         </div>
         <div class="field">
-          <label>Nome do Vendedor (Cliente)</label>
-          <input type="text" id="f-cliente-vendedor" placeholder="Nome do proprietário">
+          <label>Cliente Vendedor</label>
+          <select id="f-cliente-vendedor"></select>
+        </div>
+        <div class="field">
+          <label>Cliente Comprador</label>
+          <select id="f-cliente-comprador"></select>
         </div>
         <div class="field">
           <label>Preço de Venda (€)</label>
@@ -241,7 +245,7 @@
       <table>
         <thead>
           <tr>
-            <th>Imóvel</th><th>Cliente (Vendedor)</th><th>Preço Venda</th><th>Comissão Agência</th><th>Origem</th>
+            <th>Imóvel</th><th>Cliente Vendedor</th><th>Cliente Comprador</th><th>Preço Venda</th><th>Comissão Agência</th><th>Origem</th>
             <th>Angariador</th><th>Vendedor</th><th>Direção Comercial</th><th>Visitas</th><th>Status</th><th>Ações</th>
           </tr>
         </thead>
@@ -293,6 +297,7 @@ const STATUS_COLORS = {'Angariado':'#fdecef','Em Visitas':'#fef3c7','Vendido':'#
 
 let funcionarios = [];   // todos os funcionários (RH)
 let origensList = [];    // tabela origens
+let clientesList = [];   // tabela clientes
 let deals = [];          // negócios (com joins de funcionarios)
 let editingId = null;
 let charts = {};
@@ -372,7 +377,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 
 // ---------- Carregar dados do Supabase ----------
 async function loadAll(){
-  const [funcRes, origRes, negRes] = await Promise.all([
+  const [funcRes, origRes, negRes, clientesRes] = await Promise.all([
     supabaseClient.from('funcionarios').select('*').order('nome'),
     supabaseClient.from('origens').select('*').order('ordem'),
     supabaseClient.from('negocios').select(`
@@ -381,11 +386,13 @@ async function loadAll(){
       vendedor:funcionarios!negocios_vendedor_id_fkey(id,nome),
       dc_angariador:funcionarios!negocios_dc_angariador_id_fkey(id,nome),
       dc_vendedor:funcionarios!negocios_dc_vendedor_id_fkey(id,nome)
-    `).order('created_at')
+    `).order('created_at'),
+    supabaseClient.from('clientes').select('*').order('nome')
   ]);
   funcionarios = funcRes.data || [];
   origensList = origRes.data || [];
   deals = negRes.data || [];
+  clientesList = clientesRes.data || [];
 }
 
 // ---------- Selects ----------
@@ -405,7 +412,69 @@ function fillSelects(){
   const dcOptions = '<option value="">—</option>' + diretoresAtivos().map(a=>`<option value="${a.id}">${esc(a.nome)}</option>`).join('');
   dcAngSel.innerHTML = dcOptions;
   dcVendSel.innerHTML = dcOptions;
+
+  fillClienteSelects();
 }
+
+// ---------- Clientes (dropdowns Cliente Vendedor / Cliente Comprador) ----------
+function fillClienteSelects(){
+  const options = '<option value="">—</option>' +
+    clientesList.map(c=>`<option value="${c.id}">${esc(c.nome)}</option>`).join('') +
+    '<option value="__novo__">+ Novo Cliente</option>';
+  ['f-cliente-vendedor','f-cliente-comprador'].forEach(id=>{
+    const sel = document.getElementById(id);
+    const current = sel.value;
+    sel.innerHTML = options;
+    if(current && current !== '__novo__') sel.value = current;
+  });
+}
+
+function nomeCliente(id){
+  if(!id) return '—';
+  const c = clientesList.find(x=>x.id===id);
+  return c ? c.nome : '—';
+}
+
+function abrirNovoCliente(selectId){
+  const bodyHtml = `
+    <div class="field field-full"><label>Nome</label><input type="text" id="novo-cliente-nome" placeholder="Nome completo"></div>
+    <div class="field"><label>Contacto (Telefone)</label><input type="text" id="novo-cliente-telefone"></div>
+    <div class="field"><label>Email</label><input type="email" id="novo-cliente-email"></div>
+    <div class="field"><label>NIF</label><input type="text" id="novo-cliente-nif"></div>
+    <div class="field field-full"><label>Morada</label><input type="text" id="novo-cliente-morada"></div>
+  `;
+  openModal('Novo Cliente', bodyHtml, async ()=>{
+    const nome = document.getElementById('novo-cliente-nome').value.trim();
+    if(!nome) return;
+    const payload = {
+      nome,
+      telefone: document.getElementById('novo-cliente-telefone').value.trim() || null,
+      email: document.getElementById('novo-cliente-email').value.trim() || null,
+      nif: document.getElementById('novo-cliente-nif').value.trim() || null,
+      morada: document.getElementById('novo-cliente-morada').value.trim() || null
+    };
+    const { data, error } = await supabaseClient.from('clientes').insert(payload).select().single();
+    if(!error && data){
+      clientesList.push(data);
+      clientesList.sort((a,b)=>a.nome.localeCompare(b.nome));
+      fillClienteSelects();
+      document.getElementById(selectId).value = data.id;
+    }
+  }, 'Criar Cliente');
+}
+
+document.getElementById('f-cliente-vendedor').addEventListener('change', (e)=>{
+  if(e.target.value === '__novo__'){
+    e.target.value = '';
+    abrirNovoCliente('f-cliente-vendedor');
+  }
+});
+document.getElementById('f-cliente-comprador').addEventListener('change', (e)=>{
+  if(e.target.value === '__novo__'){
+    e.target.value = '';
+    abrirNovoCliente('f-cliente-comprador');
+  }
+});
 
 // ---------- Form ----------
 const form = document.getElementById('deal-form');
@@ -414,7 +483,8 @@ form.addEventListener('submit', async (e)=>{
   const payload = {
     morada: document.getElementById('f-morada').value.trim(),
     tipologia: document.getElementById('f-tipologia').value.trim() || null,
-    cliente_vendedor: document.getElementById('f-cliente-vendedor').value.trim() || null,
+    cliente_vendedor_id: document.getElementById('f-cliente-vendedor').value || null,
+    cliente_comprador_id: document.getElementById('f-cliente-comprador').value || null,
     preco: parseFloat(document.getElementById('f-preco').value) || 0,
     comissao_pct: parseFloat(document.getElementById('f-comissao-pct').value) || 0,
     origem: document.getElementById('f-origem').value || null,
@@ -461,7 +531,8 @@ function editDeal(id){
   editingId = id;
   document.getElementById('f-morada').value = d.morada;
   document.getElementById('f-tipologia').value = d.tipologia || '';
-  document.getElementById('f-cliente-vendedor').value = d.cliente_vendedor || '';
+  document.getElementById('f-cliente-vendedor').value = d.cliente_vendedor_id || '';
+  document.getElementById('f-cliente-comprador').value = d.cliente_comprador_id || '';
   document.getElementById('f-preco').value = d.preco;
   document.getElementById('f-comissao-pct').value = d.comissao_pct;
   document.getElementById('f-origem').value = d.origem || '';
@@ -579,7 +650,8 @@ function renderNegocios(){
 
     return `<tr>
       <td>${d.tipologia ? esc(d.tipologia)+' - ' : ''}${esc(d.morada)}</td>
-      <td>${esc(d.cliente_vendedor)}</td>
+      <td>${esc(nomeCliente(d.cliente_vendedor_id))}</td>
+      <td>${esc(nomeCliente(d.cliente_comprador_id))}</td>
       <td class="num">${eur(d.preco)}</td>
       <td class="num">${eur(comissaoAgencia(d))}</td>
       <td>${esc(d.origem)}</td>

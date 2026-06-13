@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clientes — Portal Marques &amp; Abreu</title>
+<link rel="stylesheet" href="assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+</head>
+<body>
+
+<div id="topbar" class="topbar"></div>
+
+<div class="page-wrap">
+
+<h1>Clientes</h1>
+<p class="subtitle">Registo de clientes — alimenta os campos de Cliente Vendedor e Cliente Comprador em Gestão Comercial</p>
+
+<div class="card" id="form-card">
+  <h2 id="form-title">Adicionar Cliente</h2>
+  <form id="cliente-form">
+    <input type="hidden" id="f-id">
+    <div class="field field-full">
+      <label>Nome</label>
+      <input type="text" id="f-nome" placeholder="Nome completo" required>
+    </div>
+    <div class="field">
+      <label>Contacto (Telefone)</label>
+      <input type="text" id="f-telefone" placeholder="Ex: 912 345 678">
+    </div>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="f-email" placeholder="email@exemplo.com">
+    </div>
+    <div class="field">
+      <label>NIF</label>
+      <input type="text" id="f-nif" placeholder="Ex: 123456789">
+    </div>
+    <div class="field field-full">
+      <label>Morada</label>
+      <input type="text" id="f-morada" placeholder="Endereço completo">
+    </div>
+    <div class="actions-row">
+      <button type="submit" id="btn-save">Adicionar Cliente</button>
+      <button type="button" class="secondary" id="btn-cancel" style="display:none">Cancelar Edição</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Clientes</h2>
+  <div class="scroll-x">
+    <table>
+      <thead>
+        <tr>
+          <th>Nome</th><th>Contacto</th><th>Email</th><th>NIF</th><th>Morada</th><th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tbl-clientes"></tbody>
+    </table>
+  </div>
+  <div id="clientes-empty" class="empty" style="display:none">Ainda não há clientes registados.</div>
+</div>
+
+</div><!-- /page-wrap -->
+
+<div id="modal-overlay" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3 id="modal-title"></h3>
+    <div id="modal-body"></div>
+    <div class="modal-actions">
+      <button type="button" class="secondary" id="modal-cancel">Cancelar</button>
+      <button type="button" id="modal-confirm">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<script src="assets/supabase-client.js"></script>
+<script>
+let clientes = [];
+let editingId = null;
+let canEdit = false;
+
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function formatDate(d){
+  if(!d) return '—';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+function eur(v){
+  if(v==null || v==='') return '—';
+  return new Intl.NumberFormat('pt-PT', { style:'currency', currency:'EUR', maximumFractionDigits:0 }).format(v);
+}
+
+// ---------- Modal ----------
+let modalConfirmCb = null;
+function openModal(title, bodyHtml, onConfirm, confirmText, showCancel){
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = bodyHtml;
+  document.getElementById('modal-confirm').textContent = confirmText || 'Confirmar';
+  document.getElementById('modal-cancel').style.display = (showCancel===false) ? 'none' : 'inline-block';
+  modalConfirmCb = onConfirm;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+function closeModal(){
+  document.getElementById('modal-overlay').classList.add('hidden');
+  modalConfirmCb = null;
+}
+document.getElementById('modal-cancel').addEventListener('click', closeModal);
+document.getElementById('modal-overlay').addEventListener('click', e=>{
+  if(e.target.id==='modal-overlay') closeModal();
+});
+document.getElementById('modal-confirm').addEventListener('click', ()=>{
+  const cb = modalConfirmCb;
+  closeModal();
+  if(cb) cb();
+});
+
+// ---------- Carregar dados ----------
+async function loadAll(){
+  const { data } = await supabaseClient.from('clientes').select('*').order('nome');
+  clientes = data || [];
+}
+
+// ---------- Form ----------
+const form = document.getElementById('cliente-form');
+form.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const payload = {
+    nome: document.getElementById('f-nome').value.trim(),
+    telefone: document.getElementById('f-telefone').value.trim() || null,
+    email: document.getElementById('f-email').value.trim() || null,
+    nif: document.getElementById('f-nif').value.trim() || null,
+    morada: document.getElementById('f-morada').value.trim() || null
+  };
+
+  if(editingId){
+    await supabaseClient.from('clientes').update(payload).eq('id', editingId);
+  } else {
+    await supabaseClient.from('clientes').insert(payload);
+  }
+  await loadAll();
+  resetForm();
+  renderClientes();
+});
+
+document.getElementById('btn-cancel').addEventListener('click', resetForm);
+
+function resetForm(){
+  editingId = null;
+  form.reset();
+  document.getElementById('f-id').value='';
+  document.getElementById('form-title').textContent='Adicionar Cliente';
+  document.getElementById('btn-save').textContent='Adicionar Cliente';
+  document.getElementById('btn-cancel').style.display='none';
+}
+
+function editCliente(id){
+  const c = clientes.find(x=>x.id===id);
+  if(!c) return;
+  editingId = id;
+  document.getElementById('f-nome').value = c.nome || '';
+  document.getElementById('f-telefone').value = c.telefone || '';
+  document.getElementById('f-email').value = c.email || '';
+  document.getElementById('f-nif').value = c.nif || '';
+  document.getElementById('f-morada').value = c.morada || '';
+  document.getElementById('form-title').textContent='Editar Cliente';
+  document.getElementById('btn-save').textContent='Guardar Alterações';
+  document.getElementById('btn-cancel').style.display='inline-block';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function deleteCliente(id){
+  const c = clientes.find(x=>x.id===id); if(!c) return;
+  openModal('Eliminar Cliente',
+    `<p>Tens a certeza que queres eliminar <b>${esc(c.nome)}</b>?</p>
+     <p class="note">Negócios já registados que referenciem este cliente deixarão de mostrar a associação, mas mantêm os restantes dados.</p>`,
+    async ()=>{
+      await supabaseClient.from('clientes').delete().eq('id', id);
+      await loadAll();
+      renderClientes();
+    }, 'Eliminar');
+}
+
+// ---------- Negócios do cliente ----------
+async function verNegocios(id){
+  const c = clientes.find(x=>x.id===id);
+  if(!c) return;
+
+  const { data, error } = await supabaseClient
+    .from('negocios')
+    .select('*')
+    .or(`cliente_vendedor_id.eq.${id},cliente_comprador_id.eq.${id}`)
+    .order('created_at', { ascending:false });
+
+  const negocios = data || [];
+  let bodyHtml;
+  if(error){
+    bodyHtml = '<p class="empty">Não foi possível carregar os negócios deste cliente.</p>';
+  } else if(negocios.length===0){
+    bodyHtml = '<p class="empty">Este cliente ainda não tem negócios registados.</p>';
+  } else {
+    bodyHtml = `<div class="scroll-x"><table>
+      <thead><tr><th>Imóvel</th><th>Papel</th><th>Estado</th><th>Preço</th><th>Data</th></tr></thead>
+      <tbody>${negocios.map(n=>{
+        const papeis = [];
+        if(n.cliente_vendedor_id===id) papeis.push('Vendedor');
+        if(n.cliente_comprador_id===id) papeis.push('Comprador');
+        const data = n.data_venda || n.data_angariacao || n.created_at;
+        const dataFmt = data ? formatDate(String(data).slice(0,10)) : '—';
+        return `<tr>
+          <td>${n.tipologia ? esc(n.tipologia)+' - ' : ''}${esc(n.morada || '—')}</td>
+          <td>${papeis.join(' / ') || '—'}</td>
+          <td><span class="badge badge-${String(n.status||'').replace(/ /g,'')}">${esc(n.status || '—')}</span></td>
+          <td class="num">${eur(n.preco)}</td>
+          <td>${dataFmt}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
+  }
+
+  openModal(`Negócios de ${esc(c.nome)}`, bodyHtml, null, 'Fechar', false);
+}
+
+// ---------- Tabela ----------
+function renderClientes(){
+  const tbody = document.getElementById('tbl-clientes');
+  const empty = document.getElementById('clientes-empty');
+  if(clientes.length===0){
+    tbody.innerHTML='';
+    empty.style.display='block';
+    return;
+  }
+  empty.style.display='none';
+  tbody.innerHTML = clientes.map(c=>{
+    const acoesCell = canEdit
+      ? `<button type="button" class="small secondary" onclick="editCliente('${c.id}')">Editar</button>
+         <button type="button" class="small danger" onclick="deleteCliente('${c.id}')">Eliminar</button>`
+      : '—';
+    return `<tr>
+      <td><a href="#" onclick="verNegocios('${c.id}');return false;">${esc(c.nome)}</a></td>
+      <td>${esc(c.telefone || '—')}</td>
+      <td>${esc(c.email || '—')}</td>
+      <td>${esc(c.nif || '—')}</td>
+      <td>${esc(c.morada || '—')}</td>
+      <td>${acoesCell}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ---------- Init ----------
+(async ()=>{
+  const auth = await requireAuth();
+  if(!auth) return;
+  renderTopbar('clientes', auth.profile);
+  canEdit = auth.profile.role !== 'viewer';
+
+  if(!canEdit){
+    document.getElementById('form-card').style.display = 'none';
+  }
+
+  await loadAll();
+  renderClientes();
+})();
+</script>
+</body>
+</html>
