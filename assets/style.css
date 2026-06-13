@@ -129,6 +129,16 @@ form{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1
 .field-full{grid-column:1/-1;}
 .actions-row{grid-column:1/-1;display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;}
 
+/* Form split into multiple sub-card sections (e.g. Adicionar Negocio) */
+#deal-form{display:block;}
+.form-section{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;
+  background:var(--bg);border:1px solid var(--border);border-radius:8px;
+  padding:12px;margin-bottom:12px;
+}
+.form-section h3{grid-column:1/-1;}
+.form-section:last-of-type{margin-bottom:16px;}
+
 button{
   background:var(--accent);color:#fff;border:none;padding:9px 16px;border-radius:6px;
   cursor:pointer;font-size:13px;font-weight:bold;
