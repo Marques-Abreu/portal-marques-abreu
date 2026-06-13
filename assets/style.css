@@ -118,8 +118,6 @@ tfoot td{font-weight:bold;background:var(--primary-light);}
 .badge-Perdido{background:#fee2e2;color:var(--red);}
 .badge-role-admin{background:#fdecef;color:var(--primary);}
 .badge-role-editor{background:#fef3c7;color:var(--yellow);}
-.badge-role-viewer{background:#f1f5f9;color:var(--muted);}
-.badge-role-diretor_comercial{background:#e0e7ff;color:#3730a3;}
 .badge-role-pendente{background:#fef3c7;color:var(--yellow);}
 
 /* ---------- Forms ---------- */

@@ -90,7 +90,7 @@ function renderTopbar(activePage, profile){
     return `<a href="${l.href}" style="${isActive ? 'background:rgba(255,255,255,.28)' : ''}">${l.label}</a>`;
   }).join('') + `<button id="btn-logout" type="button">Sair</button>`;
 
-  const roleLabels = { admin:'SuperAdmin', editor:'Gestor', viewer:'Comercial', diretor_comercial:'Diretor Comercial', pendente:'Pendente' };
+  const roleLabels = { admin:'SuperAdmin', editor:'Gestor', pendente:'Pendente' };
   const name = (profile && (profile.full_name || profile.email)) || '';
   const roleLabel = (profile && roleLabels[profile.role]) || '';
 
