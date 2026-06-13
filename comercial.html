@@ -126,79 +126,108 @@
     <h2 id="form-title">Adicionar Negócio</h2>
     <form id="deal-form">
       <input type="hidden" id="f-id">
-      <div class="field field-full">
-        <label>Imóvel</label>
-        <input type="text" id="f-imovel" placeholder="Ex: T2 Centro - Figueira da Foz" required>
+
+      <div class="form-section">
+        <h3>Imóvel</h3>
+        <div class="field field-full">
+          <label>Morada</label>
+          <input type="text" id="f-morada" placeholder="Ex: Rua Principal, 123 - Figueira da Foz" required>
+        </div>
+        <div class="field">
+          <label>Tipologia</label>
+          <input type="text" id="f-tipologia" placeholder="Ex: T2">
+        </div>
+        <div class="field">
+          <label>Nome do Vendedor (Cliente)</label>
+          <input type="text" id="f-cliente-vendedor" placeholder="Nome do proprietário">
+        </div>
+        <div class="field">
+          <label>Preço de Venda (€)</label>
+          <input type="number" id="f-preco" min="0" step="0.01" required>
+        </div>
+        <div class="field">
+          <label>% Comissão Agência</label>
+          <input type="number" id="f-comissao-pct" min="0" max="100" step="0.1" placeholder="Ex: 5">
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <select id="f-status">
+            <option>Angariado</option>
+            <option>Em Visitas</option>
+            <option>Vendido</option>
+            <option>Perdido</option>
+          </select>
+        </div>
       </div>
-      <div class="field">
-        <label>Preço de Venda (€)</label>
-        <input type="number" id="f-preco" min="0" step="0.01" required>
+
+      <div class="form-section">
+        <h3>Angariação</h3>
+        <div class="field">
+          <label>Origem da Angariação</label>
+          <select id="f-origem"></select>
+        </div>
+        <div class="field">
+          <label>Angariador</label>
+          <select id="f-angariador"></select>
+        </div>
+        <div class="field">
+          <label>% Comissão Angariador (sobre comissão agência)</label>
+          <input type="number" id="f-angariador-pct" min="0" max="100" step="1" placeholder="Ex: 50">
+        </div>
+        <div class="field">
+          <label>Data Angariação</label>
+          <input type="date" id="f-data-angariacao">
+        </div>
       </div>
-      <div class="field">
-        <label>% Comissão Agência</label>
-        <input type="number" id="f-comissao-pct" min="0" max="100" step="0.1" placeholder="Ex: 5">
+
+      <div class="form-section">
+        <h3>Venda</h3>
+        <div class="field">
+          <label>Vendedor</label>
+          <select id="f-vendedor"></select>
+        </div>
+        <div class="field">
+          <label>% Comissão Vendedor (sobre comissão agência)</label>
+          <input type="number" id="f-vendedor-pct" min="0" max="100" step="1" placeholder="Ex: 50">
+        </div>
+        <div class="field">
+          <label>Data Venda</label>
+          <input type="date" id="f-data-venda">
+        </div>
       </div>
-      <div class="field">
-        <label>Origem da Angariação</label>
-        <select id="f-origem"></select>
+
+      <div class="form-section">
+        <h3>Direção Comercial</h3>
+        <div class="field">
+          <label>DC - Angariação</label>
+          <select id="f-dc-angariador"></select>
+        </div>
+        <div class="field">
+          <label>% Comissão DC Angariação (sobre comissão agência)</label>
+          <input type="number" id="f-dc-angariador-pct" min="0" max="100" step="1" placeholder="Ex: 10">
+        </div>
+        <div class="field">
+          <label>DC - Venda</label>
+          <select id="f-dc-vendedor"></select>
+        </div>
+        <div class="field">
+          <label>% Comissão DC Venda (sobre comissão agência)</label>
+          <input type="number" id="f-dc-vendedor-pct" min="0" max="100" step="1" placeholder="Ex: 10">
+        </div>
       </div>
-      <div class="field">
-        <label>Status</label>
-        <select id="f-status">
-          <option>Angariado</option>
-          <option>Em Visitas</option>
-          <option>Vendido</option>
-          <option>Perdido</option>
-        </select>
+
+      <div class="form-section">
+        <h3>Visitas</h3>
+        <div class="field">
+          <label>Visitas Marcadas</label>
+          <input type="number" id="f-visitas-marc" min="0" step="1" value="0">
+        </div>
+        <div class="field">
+          <label>Visitas Realizadas</label>
+          <input type="number" id="f-visitas-real" min="0" step="1" value="0">
+        </div>
       </div>
-      <div class="field">
-        <label>Angariador</label>
-        <select id="f-angariador"></select>
-      </div>
-      <div class="field">
-        <label>% Comissão Angariador (sobre comissão agência)</label>
-        <input type="number" id="f-angariador-pct" min="0" max="100" step="1" placeholder="Ex: 50">
-      </div>
-      <div class="field">
-        <label>Vendedor</label>
-        <select id="f-vendedor"></select>
-      </div>
-      <div class="field">
-        <label>% Comissão Vendedor (sobre comissão agência)</label>
-        <input type="number" id="f-vendedor-pct" min="0" max="100" step="1" placeholder="Ex: 50">
-      </div>
-      <div class="field">
-        <label>DC - Angariação</label>
-        <select id="f-dc-angariador"></select>
-      </div>
-      <div class="field">
-        <label>% Comissão DC Angariação (sobre comissão agência)</label>
-        <input type="number" id="f-dc-angariador-pct" min="0" max="100" step="1" placeholder="Ex: 10">
-      </div>
-      <div class="field">
-        <label>DC - Venda</label>
-        <select id="f-dc-vendedor"></select>
-      </div>
-      <div class="field">
-        <label>% Comissão DC Venda (sobre comissão agência)</label>
-        <input type="number" id="f-dc-vendedor-pct" min="0" max="100" step="1" placeholder="Ex: 10">
-      </div>
-      <div class="field">
-        <label>Visitas Marcadas</label>
-        <input type="number" id="f-visitas-marc" min="0" step="1" value="0">
-      </div>
-      <div class="field">
-        <label>Visitas Realizadas</label>
-        <input type="number" id="f-visitas-real" min="0" step="1" value="0">
-      </div>
-      <div class="field">
-        <label>Data Angariação</label>
-        <input type="date" id="f-data-angariacao">
-      </div>
-      <div class="field">
-        <label>Data Venda</label>
-        <input type="date" id="f-data-venda">
-      </div>
+
       <div class="actions-row">
         <button type="submit" id="btn-save">Adicionar Negócio</button>
         <button type="button" class="secondary" id="btn-cancel" style="display:none">Cancelar Edição</button>
@@ -212,7 +241,7 @@
       <table>
         <thead>
           <tr>
-            <th>Imóvel</th><th>Preço Venda</th><th>Comissão Agência</th><th>Origem</th>
+            <th>Imóvel</th><th>Cliente (Vendedor)</th><th>Preço Venda</th><th>Comissão Agência</th><th>Origem</th>
             <th>Angariador</th><th>Vendedor</th><th>Direção Comercial</th><th>Visitas</th><th>Status</th><th>Ações</th>
           </tr>
         </thead>
@@ -378,7 +407,9 @@ const form = document.getElementById('deal-form');
 form.addEventListener('submit', async (e)=>{
   e.preventDefault();
   const payload = {
-    imovel: document.getElementById('f-imovel').value.trim(),
+    morada: document.getElementById('f-morada').value.trim(),
+    tipologia: document.getElementById('f-tipologia').value.trim() || null,
+    cliente_vendedor: document.getElementById('f-cliente-vendedor').value.trim() || null,
     preco: parseFloat(document.getElementById('f-preco').value) || 0,
     comissao_pct: parseFloat(document.getElementById('f-comissao-pct').value) || 0,
     origem: document.getElementById('f-origem').value || null,
@@ -423,7 +454,9 @@ function editDeal(id){
   const d = deals.find(x=>x.id===id);
   if(!d) return;
   editingId = id;
-  document.getElementById('f-imovel').value = d.imovel;
+  document.getElementById('f-morada').value = d.morada;
+  document.getElementById('f-tipologia').value = d.tipologia || '';
+  document.getElementById('f-cliente-vendedor').value = d.cliente_vendedor || '';
   document.getElementById('f-preco').value = d.preco;
   document.getElementById('f-comissao-pct').value = d.comissao_pct;
   document.getElementById('f-origem').value = d.origem || '';
@@ -449,7 +482,7 @@ function editDeal(id){
 
 function deleteDeal(id){
   const d = deals.find(x=>x.id===id); if(!d) return;
-  openModal('Eliminar Negócio', `<p>Tens a certeza que queres eliminar <b>${esc(d.imovel)}</b>? Esta ação não pode ser revertida.</p>`, async ()=>{
+  openModal('Eliminar Negócio', `<p>Tens a certeza que queres eliminar <b>${esc(d.morada)}</b>? Esta ação não pode ser revertida.</p>`, async ()=>{
     await supabaseClient.from('negocios').delete().eq('id', id);
     await loadAll();
     renderNegocios();
@@ -483,7 +516,7 @@ function changeStatus(id, newStatus){
   if(newStatus==='Vendido' && d.status!=='Vendido'){
     const today = new Date().toISOString().slice(0,10);
     openModal('Registar Venda',
-      `<p>Imóvel: <b>${esc(d.imovel)}</b></p>
+      `<p>Imóvel: <b>${esc(d.morada)}</b></p>
        <div class="field"><label>Data da Venda</label>
        <input type="date" id="modal-data-venda" value="${esc(d.data_venda || today)}"></div>`,
       async ()=>{
@@ -540,7 +573,8 @@ function renderNegocios(){
       : '—';
 
     return `<tr>
-      <td>${esc(d.imovel)}</td>
+      <td>${d.tipologia ? esc(d.tipologia)+' - ' : ''}${esc(d.morada)}</td>
+      <td>${esc(d.cliente_vendedor)}</td>
       <td class="num">${eur(d.preco)}</td>
       <td class="num">${eur(comissaoAgencia(d))}</td>
       <td>${esc(d.origem)}</td>
