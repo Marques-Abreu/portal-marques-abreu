@@ -261,6 +261,12 @@
     <div id="negocios-empty" class="empty" style="display:none">Ainda não há negócios registados.</div>
   </div>
 
+  <div class="card">
+    <h2>💡 Insights e Sugestões — Carteira Ativa</h2>
+    <p class="note">Análise automática dos imóveis ainda não vendidos/perdidos: tempo desde a angariação e visitas realizadas.</p>
+    <div id="insights-negocios-list"></div>
+  </div>
+
 </div>
 
 <!-- DEFINICOES -->
@@ -318,6 +324,13 @@ function pct(v){
 }
 function esc(s){
   return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+// Abrevia nomes compostos para caberem em colunas estreitas (ex: "Maria Silva Costa" -> "Maria C.")
+function abreviarNome(nome){
+  if(!nome) return '';
+  const partes = nome.trim().split(/\s+/);
+  if(partes.length < 2) return partes[0];
+  return `${partes[0]} ${partes[partes.length-1].charAt(0)}.`;
 }
 
 // Paleta de cores para gráficos com cores distintas por comercial/origem
@@ -634,6 +647,7 @@ function changeStatus(id, newStatus){
 function renderNegocios(){
   const tbody = document.getElementById('tbl-negocios');
   const empty = document.getElementById('negocios-empty');
+  renderInsightsNegocios();
   if(deals.length===0){
     tbody.innerHTML='';
     empty.style.display='block';
@@ -679,10 +693,13 @@ function renderNegocios(){
       <td>${esc(d.origem)}</td>
       <td>${esc(angNome)}${d.angariador_pct?` (${d.angariador_pct}%)`:''}</td>
       <td>${esc(vendNome)}${d.vendedor_pct?` (${d.vendedor_pct}%)`:''}</td>
-      <td>${[
-        dcAngNome ? `Ang.: ${esc(dcAngNome)}${d.dc_angariador_pct?` (${d.dc_angariador_pct}%)`:''}` : '',
-        dcVendNome ? `Venda: ${esc(dcVendNome)}${d.dc_vendedor_pct?` (${d.dc_vendedor_pct}%)`:''}` : ''
-      ].filter(Boolean).join('<br>') || '—'}</td>
+      <td>${(()=>{
+        const linhas = [
+          dcAngNome ? `<div class="dc-row"><span class="dc-tag dc-tag-ang">Ang.</span><span class="dc-nome">${esc(abreviarNome(dcAngNome))}</span>${d.dc_angariador_pct?`<span class="dc-pct">${d.dc_angariador_pct}%</span>`:''}</div>` : '',
+          dcVendNome ? `<div class="dc-row"><span class="dc-tag dc-tag-venda">Venda</span><span class="dc-nome">${esc(abreviarNome(dcVendNome))}</span>${d.dc_vendedor_pct?`<span class="dc-pct">${d.dc_vendedor_pct}%</span>`:''}</div>` : ''
+        ].filter(Boolean);
+        return linhas.length ? `<div class="dc-stack">${linhas.join('')}</div>` : '—';
+      })()}</td>
       <td>${visitasCell}</td>
       <td>${statusCell}</td>
       <td>${acoesCell}</td>
@@ -947,6 +964,68 @@ function renderInsights(ctx){
   document.getElementById('insights-list').innerHTML = insights.length
     ? insights.map(i=>`<div class="insight-item insight-${i.tipo}">${ICONES[i.tipo]} ${esc(i.texto)}</div>`).join('')
     : '<p class="empty">Sem alertas relevantes neste momento — os indicadores parecem equilibrados.</p>';
+}
+
+// ---------- Insights automáticos da Carteira Ativa (página Negócios) ----------
+function diasEntre(de, ate){
+  const d1 = new Date(de);
+  const d2 = ate ? new Date(ate) : new Date();
+  return Math.floor((d2 - d1) / (1000*60*60*24));
+}
+
+function gerarInsightsNegocios(){
+  const insights = [];
+  const ativos = deals.filter(d=> d.status!=='Vendido' && d.status!=='Perdido' && d.data_angariacao);
+
+  const comDias = ativos.map(d=>({...d, dias: diasEntre(d.data_angariacao)})).sort((a,b)=>b.dias-a.dias);
+
+  // Imóveis angariados há muito tempo sem venda (>=90 dias)
+  const antigos = comDias.filter(d=>d.dias>=90);
+  if(antigos.length){
+    antigos.slice(0,3).forEach(d=>{
+      insights.push({tipo:'alerta', texto:`O imóvel "${d.morada}" está angariado há ${d.dias} dias (status: ${d.status}) sem ter sido vendido. Pode valer a pena rever o preço ou a estratégia de divulgação.`});
+    });
+  } else if(comDias.length && comDias[0].dias>=45){
+    const d = comDias[0];
+    insights.push({tipo:'sugestao', texto:`O imóvel angariado há mais tempo na carteira ativa é "${d.morada}" (${d.dias} dias, status: ${d.status}). Vale a pena acompanhar de perto.`});
+  }
+
+  // Imóveis sem qualquer visita marcada há mais de 30 dias
+  const semVisitas = comDias.filter(d=>d.dias>=30 && (d.visitas_marc||0)===0);
+  semVisitas.slice(0,3).forEach(d=>{
+    insights.push({tipo:'alerta', texto:`"${d.morada}" está angariado há ${d.dias} dias e ainda não tem nenhuma visita marcada.`});
+  });
+
+  // Visitas marcadas mas nenhuma realizada, há algum tempo
+  const marcSemReal = comDias.filter(d=>d.dias>=15 && (d.visitas_marc||0)>0 && (d.visitas_real||0)===0);
+  marcSemReal.slice(0,3).forEach(d=>{
+    insights.push({tipo:'sugestao', texto:`"${d.morada}" tem ${d.visitas_marc} visita(s) marcada(s) mas nenhuma realizada até agora (angariado há ${d.dias} dias). Confirma se as visitas se realizaram.`});
+  });
+
+  // Várias visitas realizadas mas ainda sem venda
+  const muitasVisitasSemVenda = ativos.filter(d=>(d.visitas_real||0)>=3);
+  muitasVisitasSemVenda.slice(0,3).forEach(d=>{
+    insights.push({tipo:'sugestao', texto:`"${d.morada}" já teve ${d.visitas_real} visitas realizadas mas ainda não foi vendido. Pode valer a pena pedir feedback aos visitantes ou rever o preço.`});
+  });
+
+  // Tempo médio entre angariação e venda (negócios já vendidos)
+  const vendidosComDatas = deals.filter(d=>d.status==='Vendido' && d.data_angariacao && d.data_venda);
+  if(vendidosComDatas.length>=2){
+    const media = vendidosComDatas.reduce((s,d)=>s+diasEntre(d.data_angariacao, d.data_venda), 0) / vendidosComDatas.length;
+    insights.push({tipo:'positivo', texto:`Em média, os imóveis vendidos demoram ${Math.round(media)} dias entre a angariação e a venda.`});
+  }
+
+  return insights;
+}
+
+function renderInsightsNegocios(){
+  const el = document.getElementById('insights-negocios-list');
+  if(!el) return;
+  const ICONES = {alerta:'⚠️', positivo:'✅', sugestao:'💡'};
+  const insights = gerarInsightsNegocios();
+  el.innerHTML = insights.length
+    ? insights.map(i=>`<div class="insight-item insight-${i.tipo}">${ICONES[i.tipo]} ${esc(i.texto)}</div>`).join('')
+    : '<p class="empty">Sem alertas relevantes neste momento — os imóveis em carteira parecem bem acompanhados.</p>';
 }
 
 function drawChart(canvasId, type, data, extra){
