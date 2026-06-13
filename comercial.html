@@ -325,6 +325,11 @@ function pct(v){
 function esc(s){
   return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+function formatDate(d){
+  if(!d) return '—';
+  const [y,m,day] = String(d).slice(0,10).split('-');
+  return `${day}/${m}/${y}`;
+}
 // Abrevia nomes compostos para caberem em colunas estreitas (ex: "Maria Silva Costa" -> "Maria C.")
 function abreviarNome(nome){
   if(!nome) return '';
@@ -377,12 +382,13 @@ function nomeFunc(id){
 
 // ---------- Modal (substitui prompt/confirm) ----------
 let modalConfirmCb = null;
-function openModal(title, bodyHtml, onConfirm, confirmText, showCancel){
+function openModal(title, bodyHtml, onConfirm, confirmText, showCancel, wide){
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-body').innerHTML = bodyHtml;
   document.getElementById('modal-confirm').textContent = confirmText || 'Confirmar';
   document.getElementById('modal-cancel').style.display = (showCancel===false) ? 'none' : 'inline-block';
   modalConfirmCb = onConfirm;
+  document.querySelector('#modal-overlay .modal-box').classList.toggle('modal-wide', !!wide);
   document.getElementById('modal-overlay').classList.remove('hidden');
 }
 function closeModal(){
@@ -643,6 +649,87 @@ function changeStatus(id, newStatus){
   });
 }
 
+// ---------- Popup de Detalhes do Negócio ----------
+function verDetalhesNegocio(id){
+  const d = deals.find(x=>x.id===id);
+  if(!d) return;
+
+  const angNome = d.angariador?.nome || '';
+  const vendNome = d.vendedor?.nome || '';
+  const dcAngNome = d.dc_angariador?.nome || '';
+  const dcVendNome = d.dc_vendedor?.nome || '';
+  const dias = d.data_angariacao ? diasEntre(d.data_angariacao, d.data_venda || null) : null;
+
+  const bodyHtml = `
+    <div class="detail-section">
+      <h4>Imóvel</h4>
+      <div class="detail-grid">
+        <div class="detail-item"><span class="detail-label">Morada</span><span class="detail-value">${esc(d.morada)}</span></div>
+        <div class="detail-item"><span class="detail-label">Tipologia</span><span class="detail-value">${esc(d.tipologia || '—')}</span></div>
+        <div class="detail-item"><span class="detail-label">Status</span><span class="detail-value"><span class="badge badge-${d.status.replace(' ','')}">${esc(d.status)}</span></span></div>
+        <div class="detail-item"><span class="detail-label">Origem</span><span class="detail-value">${esc(d.origem || '—')}</span></div>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <h4>Clientes</h4>
+      <div class="detail-grid">
+        <div class="detail-item"><span class="detail-label">Cliente Vendedor</span><span class="detail-value">${esc(nomeCliente(d.cliente_vendedor_id) || '—')}</span></div>
+        <div class="detail-item"><span class="detail-label">Cliente Comprador</span><span class="detail-value">${esc(nomeCliente(d.cliente_comprador_id) || '—')}</span></div>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <h4>Negócio</h4>
+      <div class="detail-grid">
+        <div class="detail-item"><span class="detail-label">Preço de Venda</span><span class="detail-value">${eur(d.preco)}</span></div>
+        <div class="detail-item"><span class="detail-label">% Comissão Agência</span><span class="detail-value">${d.comissao_pct||0}%</span></div>
+        <div class="detail-item"><span class="detail-label">Valor Comissão Agência</span><span class="detail-value">${eur(comissaoAgencia(d))}</span></div>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <h4>Datas</h4>
+      <div class="detail-grid">
+        <div class="detail-item"><span class="detail-label">Data Angariação</span><span class="detail-value">${formatDate(d.data_angariacao)}</span></div>
+        <div class="detail-item"><span class="detail-label">Data Venda</span><span class="detail-value">${formatDate(d.data_venda)}</span></div>
+        <div class="detail-item"><span class="detail-label">${d.data_venda ? 'Dias até à venda' : 'Dias angariado'}</span><span class="detail-value">${dias!=null ? dias+' dias' : '—'}</span></div>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <h4>Angariação</h4>
+      <div class="detail-grid">
+        <div class="detail-item"><span class="detail-label">Angariador</span><span class="detail-value">${angNome ? esc(angNome)+(d.angariador_pct?` (${d.angariador_pct}%)`:'') : '—'}</span></div>
+        <div class="detail-item"><span class="detail-label">Valor Angariador</span><span class="detail-value">${eur(valorAngariador(d))}</span></div>
+        <div class="detail-item"><span class="detail-label">DC Angariação</span><span class="detail-value">${dcAngNome ? esc(dcAngNome)+(d.dc_angariador_pct?` (${d.dc_angariador_pct}%)`:'') : '—'}</span></div>
+        <div class="detail-item"><span class="detail-label">Valor DC Angariação</span><span class="detail-value">${eur(valorDcAngariador(d))}</span></div>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <h4>Venda</h4>
+      <div class="detail-grid">
+        <div class="detail-item"><span class="detail-label">Vendedor</span><span class="detail-value">${vendNome ? esc(vendNome)+(d.vendedor_pct?` (${d.vendedor_pct}%)`:'') : '—'}</span></div>
+        <div class="detail-item"><span class="detail-label">Valor Vendedor</span><span class="detail-value">${eur(valorVendedor(d))}</span></div>
+        <div class="detail-item"><span class="detail-label">DC Venda</span><span class="detail-value">${dcVendNome ? esc(dcVendNome)+(d.dc_vendedor_pct?` (${d.dc_vendedor_pct}%)`:'') : '—'}</span></div>
+        <div class="detail-item"><span class="detail-label">Valor DC Venda</span><span class="detail-value">${eur(valorDcVendedor(d))}</span></div>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <h4>Visitas</h4>
+      <div class="detail-grid">
+        <div class="detail-item"><span class="detail-label">Visitas Marcadas</span><span class="detail-value">${d.visitas_marc||0}</span></div>
+        <div class="detail-item"><span class="detail-label">Visitas Realizadas</span><span class="detail-value">${d.visitas_real||0}</span></div>
+      </div>
+    </div>
+  `;
+
+  const titulo = (d.tipologia ? d.tipologia+' - ' : '') + d.morada;
+  openModal(titulo, bodyHtml, null, 'Fechar', false, true);
+}
+
 // ---------- Tabela de Negócios ----------
 function renderNegocios(){
   const tbody = document.getElementById('tbl-negocios');
@@ -684,7 +771,7 @@ function renderNegocios(){
          <button type="button" class="small danger" onclick="deleteDeal('${d.id}')">Eliminar</button>`
       : '—';
 
-    return `<tr>
+    return `<tr class="row-clickable" onclick="if(event.target.closest('select,button,a')) return; verDetalhesNegocio('${d.id}')">
       <td>${d.tipologia ? esc(d.tipologia)+' - ' : ''}${esc(d.morada)}</td>
       <td>${esc(nomeCliente(d.cliente_vendedor_id))}</td>
       <td>${esc(nomeCliente(d.cliente_comprador_id))}</td>
