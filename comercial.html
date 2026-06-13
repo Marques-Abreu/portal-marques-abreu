@@ -686,17 +686,20 @@ function renderDashboard(){
     `<tr><td>${esc(s.origem)}</td><td class="num">${s.angariados}</td><td class="num">${s.vendidos}</td><td class="num">${pct(s.taxa)}</td></tr>`
   ).join('') || '<tr><td colspan="4" class="empty">Sem dados</td></tr>';
 
-  // Comissoes por Comercial
-  const agenteStats = comerciaisTodos().map(f=>{
-    const angariacoes = deals.filter(d=>d.angariador_id===f.id).length;
-    const vendas = deals.filter(d=>d.vendedor_id===f.id && d.status==='Vendido').length;
-    let comissao = 0;
-    vendidos.forEach(d=>{
-      if(d.angariador_id===f.id) comissao += valorAngariador(d);
-      if(d.vendedor_id===f.id) comissao += valorVendedor(d);
-    });
-    return {nome:f.nome, angariacoes, vendas, comissao};
-  });
+  // Comissoes por Comercial (inclui Diretores Comerciais que também tenham atuado como Angariador/Vendedor)
+  const agenteStats = funcionarios
+    .filter(f=>f.cargo==='Comercial' || f.cargo==='Diretor Comercial')
+    .map(f=>{
+      const angariacoes = deals.filter(d=>d.angariador_id===f.id).length;
+      const vendas = deals.filter(d=>d.vendedor_id===f.id && d.status==='Vendido').length;
+      let comissao = 0;
+      vendidos.forEach(d=>{
+        if(d.angariador_id===f.id) comissao += valorAngariador(d);
+        if(d.vendedor_id===f.id) comissao += valorVendedor(d);
+      });
+      return {nome:f.nome, cargo:f.cargo, angariacoes, vendas, comissao};
+    })
+    .filter(s=>s.cargo==='Comercial' || s.angariacoes>0 || s.vendas>0);
   document.getElementById('tbl-agentes').innerHTML = agenteStats.map(s=>
     `<tr><td>${esc(s.nome)}</td><td class="num">${s.angariacoes}</td><td class="num">${s.vendas}</td><td class="num">${eur(s.comissao)}</td></tr>`
   ).join('') || '<tr><td colspan="4" class="empty">Sem dados</td></tr>';
