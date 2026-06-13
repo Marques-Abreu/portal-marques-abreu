@@ -126,15 +126,24 @@ function calcIdade(dataNascimento){
   if(aindaNaoFezAnos) idade--;
   return idade;
 }
+function eur(v){
+  return (v||0).toLocaleString('pt-PT',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function comissaoAgencia(d){ return (d.preco||0) * (d.comissao_pct||0) / 100; }
+function valorAngariador(d){ return comissaoAgencia(d) * (d.angariador_pct||0) / 100; }
+function valorVendedor(d){ return comissaoAgencia(d) * (d.vendedor_pct||0) / 100; }
+function valorDcAngariador(d){ return comissaoAgencia(d) * (d.dc_angariador_pct||0) / 100; }
+function valorDcVendedor(d){ return comissaoAgencia(d) * (d.dc_vendedor_pct||0) / 100; }
 
 // ---------- Modal ----------
 let modalConfirmCb = null;
-function openModal(title, bodyHtml, onConfirm, confirmText, showCancel){
+function openModal(title, bodyHtml, onConfirm, confirmText, showCancel, wide){
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-body').innerHTML = bodyHtml;
   document.getElementById('modal-confirm').textContent = confirmText || 'Confirmar';
   document.getElementById('modal-cancel').style.display = (showCancel===false) ? 'none' : 'inline-block';
   modalConfirmCb = onConfirm;
+  document.querySelector('#modal-overlay .modal-box').classList.toggle('modal-wide', !!wide);
   document.getElementById('modal-overlay').classList.remove('hidden');
 }
 function closeModal(){
@@ -232,6 +241,90 @@ function deleteFuncionario(id){
     }, 'Eliminar');
 }
 
+// ---------- Negócios e ganhos do funcionário ----------
+async function verNegociosFuncionario(id){
+  const f = funcionarios.find(x=>x.id===id);
+  if(!f) return;
+
+  const { data, error } = await supabaseClient
+    .from('negocios')
+    .select('*')
+    .or(`angariador_id.eq.${id},vendedor_id.eq.${id},dc_angariador_id.eq.${id},dc_vendedor_id.eq.${id}`)
+    .order('created_at', { ascending:false });
+
+  const negocios = data || [];
+  let bodyHtml;
+
+  if(error){
+    bodyHtml = '<p class="empty">Não foi possível carregar os negócios deste funcionário.</p>';
+  } else if(negocios.length===0){
+    bodyHtml = '<p class="empty">Este funcionário ainda não está associado a nenhum negócio.</p>';
+  } else {
+    let nAngariados=0, nVendidos=0;
+    let ganhoAng=0, ganhoVend=0, ganhoDcAng=0, ganhoDcVend=0;
+
+    negocios.forEach(d=>{
+      if(d.angariador_id===id) nAngariados++;
+      if(d.vendedor_id===id && d.status==='Vendido') nVendidos++;
+      if(d.status==='Vendido'){
+        if(d.angariador_id===id) ganhoAng += valorAngariador(d);
+        if(d.vendedor_id===id) ganhoVend += valorVendedor(d);
+        if(d.dc_angariador_id===id) ganhoDcAng += valorDcAngariador(d);
+        if(d.dc_vendedor_id===id) ganhoDcVend += valorDcVendedor(d);
+      }
+    });
+    const ganhoTotal = ganhoAng + ganhoVend + ganhoDcAng + ganhoDcVend;
+
+    const resumoHtml = `<div class="detail-section">
+      <h4>Resumo de Ganhos (desde sempre)</h4>
+      <div class="detail-grid">
+        <div class="detail-item"><span class="detail-label">Imóveis Angariados</span><span class="detail-value">${nAngariados}</span></div>
+        <div class="detail-item"><span class="detail-label">Imóveis Vendidos</span><span class="detail-value">${nVendidos}</span></div>
+        <div class="detail-item"><span class="detail-label">Ganhos como Angariador</span><span class="detail-value">${eur(ganhoAng)}</span></div>
+        <div class="detail-item"><span class="detail-label">Ganhos como Vendedor</span><span class="detail-value">${eur(ganhoVend)}</span></div>
+        <div class="detail-item"><span class="detail-label">Ganhos como DC (Angariação)</span><span class="detail-value">${eur(ganhoDcAng)}</span></div>
+        <div class="detail-item"><span class="detail-label">Ganhos como DC (Venda)</span><span class="detail-value">${eur(ganhoDcVend)}</span></div>
+        <div class="detail-item"><span class="detail-label">Total de Ganhos</span><span class="detail-value"><b>${eur(ganhoTotal)}</b></span></div>
+      </div>
+    </div>`;
+
+    const tabelaHtml = `<div class="detail-section"><h4>Negócios</h4><div class="scroll-x"><table>
+      <thead><tr><th>Imóvel</th><th>Papel(éis)</th><th>Estado</th><th>Preço</th><th>Valor Recebido</th><th>Data</th></tr></thead>
+      <tbody>${negocios.map(d=>{
+        const papeis = [];
+        if(d.angariador_id===id) papeis.push('Angariador');
+        if(d.vendedor_id===id) papeis.push('Vendedor');
+        if(d.dc_angariador_id===id) papeis.push('DC Angariação');
+        if(d.dc_vendedor_id===id) papeis.push('DC Venda');
+
+        let valor = 0;
+        if(d.status==='Vendido'){
+          if(d.angariador_id===id) valor += valorAngariador(d);
+          if(d.vendedor_id===id) valor += valorVendedor(d);
+          if(d.dc_angariador_id===id) valor += valorDcAngariador(d);
+          if(d.dc_vendedor_id===id) valor += valorDcVendedor(d);
+        }
+
+        const dataRef = d.data_venda || d.data_angariacao || d.created_at;
+        const dataFmt = dataRef ? formatDate(String(dataRef).slice(0,10)) : '—';
+
+        return `<tr>
+          <td>${d.tipologia ? esc(d.tipologia)+' - ' : ''}${esc(d.morada || '—')}</td>
+          <td>${papeis.join(', ') || '—'}</td>
+          <td><span class="badge badge-${String(d.status||'').replace(/ /g,'')}">${esc(d.status || '—')}</span></td>
+          <td class="num">${eur(d.preco)}</td>
+          <td class="num">${eur(valor)}</td>
+          <td>${dataFmt}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div></div>`;
+
+    bodyHtml = resumoHtml + tabelaHtml;
+  }
+
+  openModal(`Negócios de ${esc(f.nome)}`, bodyHtml, null, 'Fechar', false, true);
+}
+
 // ---------- Tabela ----------
 function renderFuncionarios(){
   const tbody = document.getElementById('tbl-funcionarios');
@@ -249,7 +342,7 @@ function renderFuncionarios(){
          <button type="button" class="small danger" onclick="deleteFuncionario('${f.id}')">Eliminar</button>`
       : '—';
     return `<tr>
-      <td>${esc(f.nome)}</td>
+      <td><a href="#" onclick="verNegociosFuncionario('${f.id}');return false;">${esc(f.nome)}</a></td>
       <td>${esc(f.bi || '—')}</td>
       <td>${formatDate(f.data_nascimento)}</td>
       <td class="num">${idade==null ? '—' : idade + ' anos'}</td>
