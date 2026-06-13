@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recursos Humanos — Portal Marques &amp; Abreu</title>
+<link rel="stylesheet" href="assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+</head>
+<body>
+
+<div id="topbar" class="topbar"></div>
+
+<div class="page-wrap">
+
+<h1>Recursos Humanos</h1>
+<p class="subtitle">Registo de funcionários — alimenta os campos de Angariador, Vendedor e Direção Comercial em Gestão Comercial</p>
+
+<div class="card" id="form-card">
+  <h2 id="form-title">Adicionar Funcionário</h2>
+  <form id="func-form">
+    <input type="hidden" id="f-id">
+    <div class="field field-full">
+      <label>Nome</label>
+      <input type="text" id="f-nome" placeholder="Nome completo" required>
+    </div>
+    <div class="field">
+      <label>Nº BI</label>
+      <input type="text" id="f-bi" placeholder="Ex: 123456789LA042">
+    </div>
+    <div class="field">
+      <label>Data de Nascimento</label>
+      <input type="date" id="f-data-nascimento">
+    </div>
+    <div class="field">
+      <label>Idade</label>
+      <input type="text" id="f-idade" disabled placeholder="—">
+    </div>
+    <div class="field">
+      <label>Data de Contratação</label>
+      <input type="date" id="f-data-contratacao">
+    </div>
+    <div class="field">
+      <label>Tipo de Contrato</label>
+      <select id="f-tipo-contrato">
+        <option value="">—</option>
+        <option>Efetivo</option>
+        <option>Termo Certo</option>
+        <option>Termo Incerto</option>
+        <option>Prestação de Serviços</option>
+        <option>Estágio</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Cargo</label>
+      <select id="f-cargo">
+        <option value="Comercial">Comercial</option>
+        <option value="Diretor Comercial">Diretor Comercial</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Estado</label>
+      <select id="f-ativo">
+        <option value="true">Ativo</option>
+        <option value="false">Inativo</option>
+      </select>
+    </div>
+    <div class="actions-row">
+      <button type="submit" id="btn-save">Adicionar Funcionário</button>
+      <button type="button" class="secondary" id="btn-cancel" style="display:none">Cancelar Edição</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Funcionários</h2>
+  <div class="scroll-x">
+    <table>
+      <thead>
+        <tr>
+          <th>Nome</th><th>Nº BI</th><th>Data Nascimento</th><th>Idade</th>
+          <th>Data Contratação</th><th>Tipo Contrato</th><th>Cargo</th><th>Estado</th><th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tbl-funcionarios"></tbody>
+    </table>
+  </div>
+  <div id="funcionarios-empty" class="empty" style="display:none">Ainda não há funcionários registados.</div>
+</div>
+
+</div><!-- /page-wrap -->
+
+<div id="modal-overlay" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3 id="modal-title"></h3>
+    <div id="modal-body"></div>
+    <div class="modal-actions">
+      <button type="button" class="secondary" id="modal-cancel">Cancelar</button>
+      <button type="button" id="modal-confirm">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<script src="assets/supabase-client.js"></script>
+<script>
+let funcionarios = [];
+let editingId = null;
+let canEdit = false;
+
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function formatDate(d){
+  if(!d) return '—';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+function calcIdade(dataNascimento){
+  if(!dataNascimento) return null;
+  const nasc = new Date(dataNascimento + 'T00:00:00');
+  if(isNaN(nasc.getTime())) return null;
+  const hoje = new Date();
+  let idade = hoje.getFullYear() - nasc.getFullYear();
+  const aindaNaoFezAnos = (hoje.getMonth() < nasc.getMonth()) ||
+    (hoje.getMonth() === nasc.getMonth() && hoje.getDate() < nasc.getDate());
+  if(aindaNaoFezAnos) idade--;
+  return idade;
+}
+
+// ---------- Modal ----------
+let modalConfirmCb = null;
+function openModal(title, bodyHtml, onConfirm, confirmText, showCancel){
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = bodyHtml;
+  document.getElementById('modal-confirm').textContent = confirmText || 'Confirmar';
+  document.getElementById('modal-cancel').style.display = (showCancel===false) ? 'none' : 'inline-block';
+  modalConfirmCb = onConfirm;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+function closeModal(){
+  document.getElementById('modal-overlay').classList.add('hidden');
+  modalConfirmCb = null;
+}
+document.getElementById('modal-cancel').addEventListener('click', closeModal);
+document.getElementById('modal-overlay').addEventListener('click', e=>{
+  if(e.target.id==='modal-overlay') closeModal();
+});
+document.getElementById('modal-confirm').addEventListener('click', ()=>{
+  const cb = modalConfirmCb;
+  closeModal();
+  if(cb) cb();
+});
+
+// ---------- Idade automática ----------
+document.getElementById('f-data-nascimento').addEventListener('change', ()=>{
+  const idade = calcIdade(document.getElementById('f-data-nascimento').value);
+  document.getElementById('f-idade').value = (idade==null) ? '' : (idade + ' anos');
+});
+
+// ---------- Carregar dados ----------
+async function loadAll(){
+  const { data, error } = await supabaseClient.from('funcionarios').select('*').order('nome');
+  funcionarios = data || [];
+}
+
+// ---------- Form ----------
+const form = document.getElementById('func-form');
+form.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const payload = {
+    nome: document.getElementById('f-nome').value.trim(),
+    bi: document.getElementById('f-bi').value.trim() || null,
+    data_nascimento: document.getElementById('f-data-nascimento').value || null,
+    data_contratacao: document.getElementById('f-data-contratacao').value || null,
+    tipo_contrato: document.getElementById('f-tipo-contrato').value || null,
+    cargo: document.getElementById('f-cargo').value,
+    ativo: document.getElementById('f-ativo').value === 'true'
+  };
+
+  if(editingId){
+    await supabaseClient.from('funcionarios').update(payload).eq('id', editingId);
+  } else {
+    await supabaseClient.from('funcionarios').insert(payload);
+  }
+  await loadAll();
+  resetForm();
+  renderFuncionarios();
+});
+
+document.getElementById('btn-cancel').addEventListener('click', resetForm);
+
+function resetForm(){
+  editingId = null;
+  form.reset();
+  document.getElementById('f-id').value='';
+  document.getElementById('f-idade').value='';
+  document.getElementById('f-cargo').value='Comercial';
+  document.getElementById('f-ativo').value='true';
+  document.getElementById('form-title').textContent='Adicionar Funcionário';
+  document.getElementById('btn-save').textContent='Adicionar Funcionário';
+  document.getElementById('btn-cancel').style.display='none';
+}
+
+function editFuncionario(id){
+  const f = funcionarios.find(x=>x.id===id);
+  if(!f) return;
+  editingId = id;
+  document.getElementById('f-nome').value = f.nome || '';
+  document.getElementById('f-bi').value = f.bi || '';
+  document.getElementById('f-data-nascimento').value = f.data_nascimento || '';
+  const idade = calcIdade(f.data_nascimento);
+  document.getElementById('f-idade').value = (idade==null) ? '' : (idade + ' anos');
+  document.getElementById('f-data-contratacao').value = f.data_contratacao || '';
+  document.getElementById('f-tipo-contrato').value = f.tipo_contrato || '';
+  document.getElementById('f-cargo').value = f.cargo || 'Comercial';
+  document.getElementById('f-ativo').value = f.ativo ? 'true' : 'false';
+  document.getElementById('form-title').textContent='Editar Funcionário';
+  document.getElementById('btn-save').textContent='Guardar Alterações';
+  document.getElementById('btn-cancel').style.display='inline-block';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function deleteFuncionario(id){
+  const f = funcionarios.find(x=>x.id===id); if(!f) return;
+  openModal('Eliminar Funcionário',
+    `<p>Tens a certeza que queres eliminar <b>${esc(f.nome)}</b>?</p>
+     <p class="note">Negócios já registados que referenciem este funcionário deixarão de mostrar o nome (mas mantêm os valores e percentagens de comissão).</p>`,
+    async ()=>{
+      await supabaseClient.from('funcionarios').delete().eq('id', id);
+      await loadAll();
+      renderFuncionarios();
+    }, 'Eliminar');
+}
+
+// ---------- Tabela ----------
+function renderFuncionarios(){
+  const tbody = document.getElementById('tbl-funcionarios');
+  const empty = document.getElementById('funcionarios-empty');
+  if(funcionarios.length===0){
+    tbody.innerHTML='';
+    empty.style.display='block';
+    return;
+  }
+  empty.style.display='none';
+  tbody.innerHTML = funcionarios.map(f=>{
+    const idade = calcIdade(f.data_nascimento);
+    const acoesCell = canEdit
+      ? `<button type="button" class="small secondary" onclick="editFuncionario('${f.id}')">Editar</button>
+         <button type="button" class="small danger" onclick="deleteFuncionario('${f.id}')">Eliminar</button>`
+      : '—';
+    return `<tr>
+      <td>${esc(f.nome)}</td>
+      <td>${esc(f.bi || '—')}</td>
+      <td>${formatDate(f.data_nascimento)}</td>
+      <td class="num">${idade==null ? '—' : idade + ' anos'}</td>
+      <td>${formatDate(f.data_contratacao)}</td>
+      <td>${esc(f.tipo_contrato || '—')}</td>
+      <td>${esc(f.cargo)}</td>
+      <td>${f.ativo ? '<span class="badge badge-Vendido">Ativo</span>' : '<span class="badge badge-Perdido">Inativo</span>'}</td>
+      <td>${acoesCell}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ---------- Init ----------
+(async ()=>{
+  const auth = await requireAuth();
+  if(!auth) return;
+  renderTopbar('rh', auth.profile);
+  canEdit = auth.profile.role !== 'viewer';
+
+  if(!canEdit){
+    document.getElementById('form-card').style.display = 'none';
+  }
+
+  await loadAll();
+  renderFuncionarios();
+})();
+</script>
+</body>
+</html>

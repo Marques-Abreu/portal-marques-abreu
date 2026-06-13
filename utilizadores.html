@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Utilizadores e Permissões — Portal Marques &amp; Abreu</title>
+<link rel="stylesheet" href="assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+</head>
+<body>
+
+<div id="topbar" class="topbar"></div>
+
+<div class="page-wrap">
+
+<h1>Utilizadores e Permissões</h1>
+<p class="subtitle">Gestão de contas e níveis de acesso ao portal — apenas visível para administradores</p>
+
+<div class="card">
+  <h2>Níveis de Acesso</h2>
+  <p class="note">
+    <b>Administrador</b> — acesso total, incluindo gestão de utilizadores e permissões.<br>
+    <b>Editor</b> — pode criar, editar e eliminar registos em Gestão Comercial e Recursos Humanos.<br>
+    <b>Consulta</b> — apenas visualização, sem possibilidade de alterar dados.
+  </p>
+  <p class="note">Quando uma pessoa cria conta no portal, fica automaticamente com nível "Consulta" até um administrador alterar a sua permissão aqui.</p>
+</div>
+
+<div class="card">
+  <h2>Contas Registadas</h2>
+  <div class="scroll-x">
+    <table>
+      <thead>
+        <tr><th>Nome</th><th>Email</th><th>Nível de Acesso</th><th>Desde</th></tr>
+      </thead>
+      <tbody id="tbl-utilizadores"></tbody>
+    </table>
+  </div>
+  <div id="utilizadores-empty" class="empty" style="display:none">Sem contas registadas.</div>
+</div>
+
+</div><!-- /page-wrap -->
+
+<script src="assets/supabase-client.js"></script>
+<script>
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function formatDate(d){
+  if(!d) return '—';
+  const dt = new Date(d);
+  if(isNaN(dt.getTime())) return '—';
+  return dt.toLocaleDateString('pt-PT');
+}
+
+let profiles = [];
+let currentUserId = null;
+
+async function loadAll(){
+  const { data, error } = await supabaseClient.from('profiles').select('*').order('created_at');
+  profiles = data || [];
+}
+
+function renderUtilizadores(){
+  const tbody = document.getElementById('tbl-utilizadores');
+  const empty = document.getElementById('utilizadores-empty');
+  if(profiles.length===0){
+    tbody.innerHTML='';
+    empty.style.display='block';
+    return;
+  }
+  empty.style.display='none';
+  tbody.innerHTML = profiles.map(p=>{
+    const isSelf = p.id === currentUserId;
+    const roleCell = `
+      <select class="status-select" data-id="${p.id}" ${isSelf ? 'disabled title="Não podes alterar a tua própria permissão"' : ''}>
+        <option value="admin" ${p.role==='admin'?'selected':''}>Administrador</option>
+        <option value="editor" ${p.role==='editor'?'selected':''}>Editor</option>
+        <option value="viewer" ${p.role==='viewer'?'selected':''}>Consulta</option>
+      </select>
+      ${isSelf ? '<span class="note">(a tua conta)</span>' : ''}
+    `;
+    return `<tr>
+      <td>${esc(p.full_name || '—')}</td>
+      <td>${esc(p.email)}</td>
+      <td>${roleCell}</td>
+      <td>${formatDate(p.created_at)}</td>
+    </tr>`;
+  }).join('');
+
+  tbody.querySelectorAll('select[data-id]').forEach(sel=>{
+    sel.addEventListener('change', async ()=>{
+      const id = sel.dataset.id;
+      const novoRole = sel.value;
+      await supabaseClient.from('profiles').update({ role: novoRole }).eq('id', id);
+      await loadAll();
+      renderUtilizadores();
+    });
+  });
+}
+
+// ---------- Init ----------
+(async ()=>{
+  const auth = await requireAuth();
+  if(!auth) return;
+  if(auth.profile.role !== 'admin'){
+    window.location.href = 'home.html';
+    return;
+  }
+  currentUserId = auth.session.user.id;
+  renderTopbar('utilizadores', auth.profile);
+
+  await loadAll();
+  renderUtilizadores();
+})();
+</script>
+</body>
+</html>

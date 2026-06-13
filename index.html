@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portal Marques &amp; Abreu — Login</title>
+<link rel="stylesheet" href="assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+</head>
+<body>
+
+<div class="login-wrap">
+  <div class="login-box">
+    <h1>Marques &amp; Abreu</h1>
+    <p class="subtitle">Portal do Colaborador</p>
+
+    <div class="login-error" id="login-error"></div>
+    <div class="login-success" id="login-success"></div>
+
+    <!-- LOGIN -->
+    <form id="form-login">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="login-email" required autocomplete="username">
+      </div>
+      <div class="field">
+        <label>Palavra-passe</label>
+        <input type="password" id="login-password" required autocomplete="current-password">
+      </div>
+      <button type="submit">Entrar</button>
+    </form>
+    <div class="login-switch">
+      Ainda não tens conta? <a id="show-signup">Criar conta</a>
+    </div>
+
+    <!-- SIGNUP (escondido por defeito) -->
+    <form id="form-signup" style="display:none">
+      <div class="field">
+        <label>Nome completo</label>
+        <input type="text" id="signup-name" required autocomplete="name">
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="signup-email" required autocomplete="username">
+      </div>
+      <div class="field">
+        <label>Palavra-passe</label>
+        <input type="password" id="signup-password" required minlength="6" autocomplete="new-password">
+      </div>
+      <button type="submit">Criar Conta</button>
+    </form>
+    <div class="login-switch" id="switch-to-login" style="display:none">
+      Já tens conta? <a id="show-login">Entrar</a>
+    </div>
+  </div>
+</div>
+
+<script src="assets/supabase-client.js"></script>
+<script>
+const elError = document.getElementById('login-error');
+const elSuccess = document.getElementById('login-success');
+
+function showError(msg){
+  elError.textContent = msg;
+  elError.style.display = 'block';
+  elSuccess.style.display = 'none';
+}
+function showSuccess(msg){
+  elSuccess.textContent = msg;
+  elSuccess.style.display = 'block';
+  elError.style.display = 'none';
+}
+function clearMsgs(){
+  elError.style.display = 'none';
+  elSuccess.style.display = 'none';
+}
+
+// ---- Alternar entre login e criar conta ----
+document.getElementById('show-signup').addEventListener('click', ()=>{
+  document.getElementById('form-login').style.display='none';
+  document.querySelector('.login-switch').style.display='none';
+  document.getElementById('form-signup').style.display='grid';
+  document.getElementById('switch-to-login').style.display='block';
+  clearMsgs();
+});
+document.getElementById('show-login').addEventListener('click', ()=>{
+  document.getElementById('form-signup').style.display='none';
+  document.getElementById('switch-to-login').style.display='none';
+  document.getElementById('form-login').style.display='grid';
+  document.querySelector('.login-switch').style.display='block';
+  clearMsgs();
+});
+
+// ---- Login ----
+document.getElementById('form-login').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  clearMsgs();
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if(error){
+    showError(traduzirErro(error.message));
+    return;
+  }
+  window.location.href = 'home.html';
+});
+
+// ---- Criar conta ----
+document.getElementById('form-signup').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  clearMsgs();
+  const fullName = document.getElementById('signup-name').value.trim();
+  const email = document.getElementById('signup-email').value.trim();
+  const password = document.getElementById('signup-password').value;
+  const { data, error } = await supabaseClient.auth.signUp({
+    email, password,
+    options: { data: { full_name: fullName } }
+  });
+  if(error){
+    showError(traduzirErro(error.message));
+    return;
+  }
+  if(data.session){
+    // confirmação de email desativada -> já entra logo
+    window.location.href = 'home.html';
+    return;
+  }
+  showSuccess('Conta criada! Verifica o teu email para confirmar a conta e depois faz login. Um administrador terá de te atribuir permissões de acesso.');
+});
+
+function traduzirErro(msg){
+  if(/invalid login credentials/i.test(msg)) return 'Email ou palavra-passe incorretos.';
+  if(/already registered/i.test(msg)) return 'Já existe uma conta com este email.';
+  if(/password should be at least/i.test(msg)) return 'A palavra-passe deve ter pelo menos 6 caracteres.';
+  return msg;
+}
+
+// ---- Se já estiver autenticado, ir direto para home ----
+(async ()=>{
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if(session) window.location.href = 'home.html';
+})();
+</script>
+</body>
+</html>

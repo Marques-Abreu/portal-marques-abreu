@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portal Marques &amp; Abreu</title>
+<link rel="stylesheet" href="assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+</head>
+<body>
+
+<div id="topbar" class="topbar"></div>
+
+<div class="page-wrap">
+  <h1>Portal do Colaborador</h1>
+  <p class="subtitle">Marques &amp; Abreu — escolhe um módulo</p>
+
+  <div class="module-grid" id="module-grid"></div>
+</div>
+
+<script src="assets/supabase-client.js"></script>
+<script>
+(async ()=>{
+  const auth = await requireAuth();
+  if(!auth) return;
+  const { profile } = auth;
+
+  renderTopbar('home', profile);
+
+  const modules = [
+    {
+      icon:'📊', title:'Gestão Comercial', href:'comercial.html',
+      desc:'Negócios, comissões e dashboards da atividade comercial.'
+    },
+    {
+      icon:'👥', title:'Recursos Humanos', href:'rh.html',
+      desc:'Registo de funcionários: dados pessoais, contratos e cargos.'
+    }
+  ];
+
+  if(profile.role === 'admin'){
+    modules.push({
+      icon:'🔐', title:'Utilizadores e Permissões', href:'utilizadores.html',
+      desc:'Gestão de contas, acessos e permissões do portal.', tag:'Admin'
+    });
+  }
+
+  document.getElementById('module-grid').innerHTML = modules.map(m=>`
+    <a class="module-card" href="${m.href}">
+      ${m.tag ? `<span class="tag">${m.tag}</span>` : ''}
+      <span class="module-icon">${m.icon}</span>
+      <h2>${m.title}</h2>
+      <p>${m.desc}</p>
+    </a>
+  `).join('');
+})();
+</script>
+</body>
+</html>

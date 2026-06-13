@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gestão Comercial — Portal Marques &amp; Abreu</title>
+<link rel="stylesheet" href="assets/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<div id="topbar" class="topbar"></div>
+
+<div class="page-wrap">
+
+<h1>Gestão Comercial</h1>
+<p class="subtitle">Negócios, comissões e dashboards — dados partilhados em tempo real com a equipa</p>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="dashboard">Dashboard</button>
+  <button class="tab-btn" data-tab="negocios">Negócios</button>
+  <button class="tab-btn" data-tab="definicoes">Definições</button>
+</div>
+
+<!-- DASHBOARD -->
+<div id="tab-dashboard" class="tab-content active">
+
+  <div class="card">
+    <h2>Indicadores Gerais</h2>
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-label">Imóveis Angariados</div><div class="kpi-value" id="kpi-angariados">0</div></div>
+      <div class="kpi-card"><div class="kpi-label">Vendas Concluídas</div><div class="kpi-value" id="kpi-vendas">0</div></div>
+      <div class="kpi-card"><div class="kpi-label">Visitas Marcadas</div><div class="kpi-value" id="kpi-visitas-marc">0</div></div>
+      <div class="kpi-card"><div class="kpi-label">Visitas Realizadas</div><div class="kpi-value" id="kpi-visitas-real">0</div></div>
+      <div class="kpi-card"><div class="kpi-label">Receita Agência (€) — Total</div><div class="kpi-value" id="kpi-receita">0 €</div></div>
+      <div class="kpi-card"><div class="kpi-label">Comissões Pagas a Comerciais — Total</div><div class="kpi-value" id="kpi-comissoes-total">0 €</div></div>
+      <div class="kpi-card"><div class="kpi-label">Comissão Direção Comercial — Total</div><div class="kpi-value" id="kpi-dc-total">0 €</div></div>
+      <div class="kpi-card"><div class="kpi-label">Receita Líquida Agência — Total</div><div class="kpi-value" id="kpi-liquido-total">0 €</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Taxas de Conversão</h2>
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-label">Vendas / Visitas Realizadas</div><div class="kpi-value" id="kpi-conv-visitas">0%</div></div>
+      <div class="kpi-card"><div class="kpi-label">Vendas / Imóveis Angariados</div><div class="kpi-value" id="kpi-conv-angariados">0%</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Gráficos</h2>
+    <div class="charts-grid">
+      <div>
+        <h3>Comissão Total por Comercial</h3>
+        <div class="chart-box"><canvas id="chartAgentes"></canvas></div>
+      </div>
+      <div>
+        <h3>Angariações vs Vendas por Origem</h3>
+        <div class="chart-box"><canvas id="chartOrigem"></canvas></div>
+      </div>
+      <div>
+        <h3>Funil: Visitas → Vendas</h3>
+        <div class="chart-box"><canvas id="chartFunil"></canvas></div>
+      </div>
+      <div>
+        <h3>Vendas por Origem da Angariação</h3>
+        <div class="chart-box"><canvas id="chartOrigemPie"></canvas></div>
+      </div>
+      <div>
+        <h3>Comissão Total por Direção Comercial</h3>
+        <div class="chart-box"><canvas id="chartDC"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Receita e Comissões por Mês (com base na Data de Venda)</h2>
+    <p class="note">Inclui apenas negócios com status "Vendido" e Data de Venda preenchida.</p>
+    <div class="chart-box" style="margin-bottom:16px"><canvas id="chartMensal"></canvas></div>
+    <div class="scroll-x">
+      <table>
+        <thead><tr><th>Mês</th><th>Receita Agência (€)</th><th>Comissões Pagas a Comerciais (€)</th><th>Comissão Direção Comercial (€)</th><th>Receita Líquida Agência (€)</th></tr></thead>
+        <tbody id="tbl-mensal"></tbody>
+        <tfoot id="tbl-mensal-total"></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="tables-grid">
+    <div class="card">
+      <h2>Conversão por Origem de Angariação</h2>
+      <div class="scroll-x">
+        <table>
+          <thead><tr><th>Origem</th><th>Angariados</th><th>Vendidos</th><th>Taxa Conversão</th></tr></thead>
+          <tbody id="tbl-origem"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Comissões por Comercial</h2>
+      <div class="scroll-x">
+        <table>
+          <thead><tr><th>Comercial</th><th>Angariações</th><th>Vendas</th><th>Comissão Total (€)</th></tr></thead>
+          <tbody id="tbl-agentes"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Comissões por Direção Comercial</h2>
+      <div class="scroll-x">
+        <table>
+          <thead><tr><th>Direção Comercial</th><th>Angariações</th><th>Comissão Angariação (€)</th><th>Vendas</th><th>Comissão Venda (€)</th><th>Comissão Total (€)</th></tr></thead>
+          <tbody id="tbl-dc"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- NEGOCIOS -->
+<div id="tab-negocios" class="tab-content">
+
+  <div class="card" id="form-card">
+    <h2 id="form-title">Adicionar Negócio</h2>
+    <form id="deal-form">
+      <input type="hidden" id="f-id">
+      <div class="field field-full">
+        <label>Imóvel</label>
+        <input type="text" id="f-imovel" placeholder="Ex: T2 Centro - Figueira da Foz" required>
+      </div>
+      <div class="field">
+        <label>Preço de Venda (€)</label>
+        <input type="number" id="f-preco" min="0" step="0.01" required>
+      </div>
+      <div class="field">
+        <label>% Comissão Agência</label>
+        <input type="number" id="f-comissao-pct" min="0" max="100" step="0.1" placeholder="Ex: 5">
+      </div>
+      <div class="field">
+        <label>Origem da Angariação</label>
+        <select id="f-origem"></select>
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select id="f-status">
+          <option>Angariado</option>
+          <option>Em Visitas</option>
+          <option>Vendido</option>
+          <option>Perdido</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Angariador</label>
+        <select id="f-angariador"></select>
+      </div>
+      <div class="field">
+        <label>% Comissão Angariador (sobre comissão agência)</label>
+        <input type="number" id="f-angariador-pct" min="0" max="100" step="1" placeholder="Ex: 50">
+      </div>
+      <div class="field">
+        <label>Vendedor</label>
+        <select id="f-vendedor"></select>
+      </div>
+      <div class="field">
+        <label>% Comissão Vendedor (sobre comissão agência)</label>
+        <input type="number" id="f-vendedor-pct" min="0" max="100" step="1" placeholder="Ex: 50">
+      </div>
+      <div class="field">
+        <label>DC - Angariação</label>
+        <select id="f-dc-angariador"></select>
+      </div>
+      <div class="field">
+        <label>% Comissão DC Angariação (sobre comissão agência)</label>
+        <input type="number" id="f-dc-angariador-pct" min="0" max="100" step="1" placeholder="Ex: 10">
+      </div>
+      <div class="field">
+        <label>DC - Venda</label>
+        <select id="f-dc-vendedor"></select>
+      </div>
+      <div class="field">
+        <label>% Comissão DC Venda (sobre comissão agência)</label>
+        <input type="number" id="f-dc-vendedor-pct" min="0" max="100" step="1" placeholder="Ex: 10">
+      </div>
+      <div class="field">
+        <label>Visitas Marcadas</label>
+        <input type="number" id="f-visitas-marc" min="0" step="1" value="0">
+      </div>
+      <div class="field">
+        <label>Visitas Realizadas</label>
+        <input type="number" id="f-visitas-real" min="0" step="1" value="0">
+      </div>
+      <div class="field">
+        <label>Data Angariação</label>
+        <input type="date" id="f-data-angariacao">
+      </div>
+      <div class="field">
+        <label>Data Venda</label>
+        <input type="date" id="f-data-venda">
+      </div>
+      <div class="actions-row">
+        <button type="submit" id="btn-save">Adicionar Negócio</button>
+        <button type="button" class="secondary" id="btn-cancel" style="display:none">Cancelar Edição</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Lista de Negócios</h2>
+    <div class="scroll-x">
+      <table>
+        <thead>
+          <tr>
+            <th>Imóvel</th><th>Preço Venda</th><th>Comissão Agência</th><th>Origem</th>
+            <th>Angariador</th><th>Vendedor</th><th>Direção Comercial</th><th>Visitas</th><th>Status</th><th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-negocios"></tbody>
+      </table>
+    </div>
+    <div id="negocios-empty" class="empty" style="display:none">Ainda não há negócios registados.</div>
+  </div>
+
+</div>
+
+<!-- DEFINICOES -->
+<div id="tab-definicoes" class="tab-content">
+
+  <div class="card">
+    <h2>Origens de Angariação</h2>
+    <p class="note">Lista de origens usada no formulário de negócios e na análise de conversão por origem.</p>
+    <div class="list-manager" id="origens-chips"></div>
+    <div class="add-row" id="origens-add-row">
+      <input type="text" id="new-origem" placeholder="Nova origem (ex: Email Marketing)">
+      <button type="button" id="btn-add-origem">Adicionar</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Comerciais e Direção Comercial</h2>
+    <p class="note">A lista de Comerciais e de Direção Comercial é gerida no módulo <a href="rh.html">Recursos Humanos</a>, através do campo "Cargo" de cada funcionário.</p>
+  </div>
+
+</div>
+
+</div><!-- /page-wrap -->
+
+<div id="modal-overlay" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3 id="modal-title"></h3>
+    <div id="modal-body"></div>
+    <div class="modal-actions">
+      <button type="button" class="secondary" id="modal-cancel">Cancelar</button>
+      <button type="button" id="modal-confirm">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<script src="assets/supabase-client.js"></script>
+<script>
+const STATUSES = ['Angariado','Em Visitas','Vendido','Perdido'];
+const STATUS_COLORS = {'Angariado':'#fdecef','Em Visitas':'#fef3c7','Vendido':'#dcfce7','Perdido':'#fee2e2'};
+
+let funcionarios = [];   // todos os funcionários (RH)
+let origensList = [];    // tabela origens
+let deals = [];          // negócios (com joins de funcionarios)
+let editingId = null;
+let charts = {};
+let canEdit = false;
+
+// ---------- Helpers ----------
+function eur(v){
+  return (v||0).toLocaleString('pt-PT',{style:'currency',currency:'EUR',minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function pct(v){
+  return ((v||0)*100).toFixed(1).replace('.',',') + '%';
+}
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function comissaoAgencia(d){ return (d.preco||0) * (d.comissao_pct||0) / 100; }
+function valorAngariador(d){ return comissaoAgencia(d) * (d.angariador_pct||0) / 100; }
+function valorVendedor(d){ return comissaoAgencia(d) * (d.vendedor_pct||0) / 100; }
+function valorDcAngariador(d){ return comissaoAgencia(d) * (d.dc_angariador_pct||0) / 100; }
+function valorDcVendedor(d){ return comissaoAgencia(d) * (d.dc_vendedor_pct||0) / 100; }
+
+const MES_NOMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+function formatMes(ym){
+  if(ym==='sem-data') return 'Sem Data';
+  const [y,m] = ym.split('-');
+  return `${MES_NOMES[parseInt(m,10)-1]} ${y}`;
+}
+
+function comerciaisAtivos(){ return funcionarios.filter(f=>f.cargo==='Comercial' && f.ativo); }
+function diretoresAtivos(){ return funcionarios.filter(f=>f.cargo==='Diretor Comercial' && f.ativo); }
+function comerciaisTodos(){ return funcionarios.filter(f=>f.cargo==='Comercial'); }
+function diretoresTodos(){ return funcionarios.filter(f=>f.cargo==='Diretor Comercial'); }
+function nomeFunc(id){
+  const f = funcionarios.find(x=>x.id===id);
+  return f ? f.nome : '';
+}
+
+// ---------- Modal (substitui prompt/confirm) ----------
+let modalConfirmCb = null;
+function openModal(title, bodyHtml, onConfirm, confirmText, showCancel){
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = bodyHtml;
+  document.getElementById('modal-confirm').textContent = confirmText || 'Confirmar';
+  document.getElementById('modal-cancel').style.display = (showCancel===false) ? 'none' : 'inline-block';
+  modalConfirmCb = onConfirm;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+function closeModal(){
+  document.getElementById('modal-overlay').classList.add('hidden');
+  modalConfirmCb = null;
+}
+document.getElementById('modal-cancel').addEventListener('click', closeModal);
+document.getElementById('modal-overlay').addEventListener('click', e=>{
+  if(e.target.id==='modal-overlay') closeModal();
+});
+document.getElementById('modal-confirm').addEventListener('click', ()=>{
+  const cb = modalConfirmCb;
+  closeModal();
+  if(cb) cb();
+});
+
+// ---------- Tabs ----------
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab==='dashboard') renderDashboard();
+  });
+});
+
+// ---------- Carregar dados do Supabase ----------
+async function loadAll(){
+  const [funcRes, origRes, negRes] = await Promise.all([
+    supabaseClient.from('funcionarios').select('*').order('nome'),
+    supabaseClient.from('origens').select('*').order('ordem'),
+    supabaseClient.from('negocios').select(`
+      *,
+      angariador:funcionarios!negocios_angariador_id_fkey(id,nome),
+      vendedor:funcionarios!negocios_vendedor_id_fkey(id,nome),
+      dc_angariador:funcionarios!negocios_dc_angariador_id_fkey(id,nome),
+      dc_vendedor:funcionarios!negocios_dc_vendedor_id_fkey(id,nome)
+    `).order('created_at')
+  ]);
+  funcionarios = funcRes.data || [];
+  origensList = origRes.data || [];
+  deals = negRes.data || [];
+}
+
+// ---------- Selects ----------
+function fillSelects(){
+  const origemSel = document.getElementById('f-origem');
+  const angSel = document.getElementById('f-angariador');
+  const vendSel = document.getElementById('f-vendedor');
+  const dcAngSel = document.getElementById('f-dc-angariador');
+  const dcVendSel = document.getElementById('f-dc-vendedor');
+
+  origemSel.innerHTML = origensList.map(o=>`<option value="${esc(o.nome)}">${esc(o.nome)}</option>`).join('');
+
+  const agentOptions = '<option value="">—</option>' + comerciaisAtivos().map(a=>`<option value="${a.id}">${esc(a.nome)}</option>`).join('');
+  angSel.innerHTML = agentOptions;
+  vendSel.innerHTML = agentOptions;
+
+  const dcOptions = '<option value="">—</option>' + diretoresAtivos().map(a=>`<option value="${a.id}">${esc(a.nome)}</option>`).join('');
+  dcAngSel.innerHTML = dcOptions;
+  dcVendSel.innerHTML = dcOptions;
+}
+
+// ---------- Form ----------
+const form = document.getElementById('deal-form');
+form.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const payload = {
+    imovel: document.getElementById('f-imovel').value.trim(),
+    preco: parseFloat(document.getElementById('f-preco').value) || 0,
+    comissao_pct: parseFloat(document.getElementById('f-comissao-pct').value) || 0,
+    origem: document.getElementById('f-origem').value || null,
+    angariador_id: document.getElementById('f-angariador').value || null,
+    angariador_pct: parseFloat(document.getElementById('f-angariador-pct').value) || 0,
+    vendedor_id: document.getElementById('f-vendedor').value || null,
+    vendedor_pct: parseFloat(document.getElementById('f-vendedor-pct').value) || 0,
+    dc_angariador_id: document.getElementById('f-dc-angariador').value || null,
+    dc_angariador_pct: parseFloat(document.getElementById('f-dc-angariador-pct').value) || 0,
+    dc_vendedor_id: document.getElementById('f-dc-vendedor').value || null,
+    dc_vendedor_pct: parseFloat(document.getElementById('f-dc-vendedor-pct').value) || 0,
+    visitas_marc: parseInt(document.getElementById('f-visitas-marc').value) || 0,
+    visitas_real: parseInt(document.getElementById('f-visitas-real').value) || 0,
+    status: document.getElementById('f-status').value,
+    data_angariacao: document.getElementById('f-data-angariacao').value || null,
+    data_venda: document.getElementById('f-data-venda').value || null
+  };
+
+  if(editingId){
+    await supabaseClient.from('negocios').update(payload).eq('id', editingId);
+  } else {
+    await supabaseClient.from('negocios').insert(payload);
+  }
+  await loadAll();
+  resetForm();
+  renderNegocios();
+  renderDashboard();
+});
+
+document.getElementById('btn-cancel').addEventListener('click', resetForm);
+
+function resetForm(){
+  editingId = null;
+  form.reset();
+  document.getElementById('f-id').value='';
+  document.getElementById('form-title').textContent='Adicionar Negócio';
+  document.getElementById('btn-save').textContent='Adicionar Negócio';
+  document.getElementById('btn-cancel').style.display='none';
+}
+
+function editDeal(id){
+  const d = deals.find(x=>x.id===id);
+  if(!d) return;
+  editingId = id;
+  document.getElementById('f-imovel').value = d.imovel;
+  document.getElementById('f-preco').value = d.preco;
+  document.getElementById('f-comissao-pct').value = d.comissao_pct;
+  document.getElementById('f-origem').value = d.origem || '';
+  document.getElementById('f-status').value = d.status;
+  document.getElementById('f-angariador').value = d.angariador_id || '';
+  document.getElementById('f-angariador-pct').value = d.angariador_pct;
+  document.getElementById('f-vendedor').value = d.vendedor_id || '';
+  document.getElementById('f-vendedor-pct').value = d.vendedor_pct;
+  document.getElementById('f-dc-angariador').value = d.dc_angariador_id || '';
+  document.getElementById('f-dc-angariador-pct').value = d.dc_angariador_pct || 0;
+  document.getElementById('f-dc-vendedor').value = d.dc_vendedor_id || '';
+  document.getElementById('f-dc-vendedor-pct').value = d.dc_vendedor_pct || 0;
+  document.getElementById('f-visitas-marc').value = d.visitas_marc;
+  document.getElementById('f-visitas-real').value = d.visitas_real;
+  document.getElementById('f-data-angariacao').value = d.data_angariacao || '';
+  document.getElementById('f-data-venda').value = d.data_venda || '';
+  document.getElementById('form-title').textContent='Editar Negócio';
+  document.getElementById('btn-save').textContent='Guardar Alterações';
+  document.getElementById('btn-cancel').style.display='inline-block';
+  document.querySelector('[data-tab="negocios"]').click();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function deleteDeal(id){
+  const d = deals.find(x=>x.id===id); if(!d) return;
+  openModal('Eliminar Negócio', `<p>Tens a certeza que queres eliminar <b>${esc(d.imovel)}</b>? Esta ação não pode ser revertida.</p>`, async ()=>{
+    await supabaseClient.from('negocios').delete().eq('id', id);
+    await loadAll();
+    renderNegocios();
+    renderDashboard();
+  }, 'Eliminar');
+}
+
+async function incVisitaMarc(id){
+  const d = deals.find(x=>x.id===id); if(!d) return;
+  await supabaseClient.from('negocios').update({ visitas_marc: (d.visitas_marc||0)+1 }).eq('id', id);
+  await loadAll(); renderNegocios(); renderDashboard();
+}
+async function decVisitaMarc(id){
+  const d = deals.find(x=>x.id===id); if(!d) return;
+  await supabaseClient.from('negocios').update({ visitas_marc: Math.max(0,(d.visitas_marc||0)-1) }).eq('id', id);
+  await loadAll(); renderNegocios(); renderDashboard();
+}
+async function incVisitaReal(id){
+  const d = deals.find(x=>x.id===id); if(!d) return;
+  await supabaseClient.from('negocios').update({ visitas_real: (d.visitas_real||0)+1 }).eq('id', id);
+  await loadAll(); renderNegocios(); renderDashboard();
+}
+async function decVisitaReal(id){
+  const d = deals.find(x=>x.id===id); if(!d) return;
+  await supabaseClient.from('negocios').update({ visitas_real: Math.max(0,(d.visitas_real||0)-1) }).eq('id', id);
+  await loadAll(); renderNegocios(); renderDashboard();
+}
+
+function changeStatus(id, newStatus){
+  const d = deals.find(x=>x.id===id); if(!d) return;
+  if(newStatus==='Vendido' && d.status!=='Vendido'){
+    const today = new Date().toISOString().slice(0,10);
+    openModal('Registar Venda',
+      `<p>Imóvel: <b>${esc(d.imovel)}</b></p>
+       <div class="field"><label>Data da Venda</label>
+       <input type="date" id="modal-data-venda" value="${esc(d.data_venda || today)}"></div>`,
+      async ()=>{
+        const dataVenda = document.getElementById('modal-data-venda').value || today;
+        await supabaseClient.from('negocios').update({ status: newStatus, data_venda: dataVenda }).eq('id', id);
+        await loadAll(); renderNegocios(); renderDashboard();
+      }, 'Confirmar Venda');
+    renderNegocios(); // reverte visualmente a seleção até confirmar
+    return;
+  }
+  supabaseClient.from('negocios').update({ status: newStatus }).eq('id', id).then(async ()=>{
+    await loadAll(); renderNegocios(); renderDashboard();
+  });
+}
+
+// ---------- Tabela de Negócios ----------
+function renderNegocios(){
+  const tbody = document.getElementById('tbl-negocios');
+  const empty = document.getElementById('negocios-empty');
+  if(deals.length===0){
+    tbody.innerHTML='';
+    empty.style.display='block';
+    return;
+  }
+  empty.style.display='none';
+  tbody.innerHTML = deals.map(d=>{
+    const bg = STATUS_COLORS[d.status] || '#fff';
+    const angNome = d.angariador?.nome || '';
+    const vendNome = d.vendedor?.nome || '';
+    const dcAngNome = d.dc_angariador?.nome || '';
+    const dcVendNome = d.dc_vendedor?.nome || '';
+
+    const statusCell = canEdit
+      ? `<select class="status-select" style="background:${bg}" onchange="changeStatus('${d.id}', this.value)">
+           ${STATUSES.map(s=>`<option value="${esc(s)}" ${s===d.status?'selected':''}>${esc(s)}</option>`).join('')}
+         </select>`
+      : `<span class="badge badge-${d.status.replace(' ','')}">${esc(d.status)}</span>`;
+
+    const visitasCell = canEdit
+      ? `<div class="visit-row">Marc.: <b>${d.visitas_marc}</b>
+           <button type="button" class="btn-tiny" onclick="incVisitaMarc('${d.id}')" title="Adicionar visita marcada">+</button>
+           <button type="button" class="btn-tiny" onclick="decVisitaMarc('${d.id}')" title="Remover visita marcada">&minus;</button>
+         </div>
+         <div class="visit-row">Real.: <b>${d.visitas_real}</b>
+           <button type="button" class="btn-tiny" onclick="incVisitaReal('${d.id}')" title="Registar visita realizada">+</button>
+           <button type="button" class="btn-tiny" onclick="decVisitaReal('${d.id}')" title="Remover visita realizada">&minus;</button>
+         </div>`
+      : `<div class="visit-row">Marc.: <b>${d.visitas_marc}</b></div>
+         <div class="visit-row">Real.: <b>${d.visitas_real}</b></div>`;
+
+    const acoesCell = canEdit
+      ? `<button type="button" class="small secondary" onclick="editDeal('${d.id}')">Editar</button>
+         <button type="button" class="small danger" onclick="deleteDeal('${d.id}')">Eliminar</button>`
+      : '—';
+
+    return `<tr>
+      <td>${esc(d.imovel)}</td>
+      <td class="num">${eur(d.preco)}</td>
+      <td class="num">${eur(comissaoAgencia(d))}</td>
+      <td>${esc(d.origem)}</td>
+      <td>${esc(angNome)}${d.angariador_pct?` (${d.angariador_pct}%)`:''}</td>
+      <td>${esc(vendNome)}${d.vendedor_pct?` (${d.vendedor_pct}%)`:''}</td>
+      <td>${[
+        dcAngNome ? `Ang.: ${esc(dcAngNome)}${d.dc_angariador_pct?` (${d.dc_angariador_pct}%)`:''}` : '',
+        dcVendNome ? `Venda: ${esc(dcVendNome)}${d.dc_vendedor_pct?` (${d.dc_vendedor_pct}%)`:''}` : ''
+      ].filter(Boolean).join('<br>') || '—'}</td>
+      <td>${visitasCell}</td>
+      <td>${statusCell}</td>
+      <td>${acoesCell}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ---------- Definições (Origens) ----------
+function renderDefinicoes(){
+  const orChips = document.getElementById('origens-chips');
+  orChips.innerHTML = origensList.map(o=>
+    canEdit
+      ? `<div class="chip">${esc(o.nome)}<button type="button" onclick="removeOrigem('${o.id}')" title="Remover">&times;</button></div>`
+      : `<div class="chip">${esc(o.nome)}</div>`
+  ).join('') || '<p class="empty">Sem origens definidas.</p>';
+}
+async function removeOrigem(id){
+  await supabaseClient.from('origens').delete().eq('id', id);
+  await loadAll(); fillSelects(); renderDefinicoes(); renderDashboard();
+}
+document.getElementById('btn-add-origem').addEventListener('click', async ()=>{
+  const inp = document.getElementById('new-origem');
+  const v = inp.value.trim();
+  if(v && !origensList.some(o=>o.nome===v)){
+    const ordem = origensList.length ? Math.max(...origensList.map(o=>o.ordem||0))+1 : 1;
+    await supabaseClient.from('origens').insert({ nome: v, ordem });
+    await loadAll(); fillSelects(); renderDefinicoes();
+  }
+  inp.value='';
+});
+
+// ---------- Dashboard ----------
+function renderDashboard(){
+  const totalAngariados = deals.length;
+  const vendidos = deals.filter(d=>d.status==='Vendido');
+  const totalVendas = vendidos.length;
+  const visitasMarc = deals.reduce((s,d)=>s+(d.visitas_marc||0),0);
+  const visitasReal = deals.reduce((s,d)=>s+(d.visitas_real||0),0);
+  const receita = vendidos.reduce((s,d)=>s+comissaoAgencia(d),0);
+
+  const comissoesPagasTotal = vendidos.reduce((s,d)=>s+valorAngariador(d)+valorVendedor(d),0);
+  const comissaoDCTotal = vendidos.reduce((s,d)=>s+valorDcAngariador(d)+valorDcVendedor(d),0);
+  const liquidoTotal = receita - comissoesPagasTotal - comissaoDCTotal;
+
+  document.getElementById('kpi-angariados').textContent = totalAngariados;
+  document.getElementById('kpi-vendas').textContent = totalVendas;
+  document.getElementById('kpi-visitas-marc').textContent = visitasMarc;
+  document.getElementById('kpi-visitas-real').textContent = visitasReal;
+  document.getElementById('kpi-receita').textContent = eur(receita);
+  document.getElementById('kpi-comissoes-total').textContent = eur(comissoesPagasTotal);
+  document.getElementById('kpi-dc-total').textContent = eur(comissaoDCTotal);
+  document.getElementById('kpi-liquido-total').textContent = eur(liquidoTotal);
+
+  document.getElementById('kpi-conv-visitas').textContent = pct(visitasReal? totalVendas/visitasReal : 0);
+  document.getElementById('kpi-conv-angariados').textContent = pct(totalAngariados? totalVendas/totalAngariados : 0);
+
+  // Resumo mensal (com base na data de venda dos negócios "Vendido")
+  const mensalMap = {};
+  vendidos.forEach(d=>{
+    const key = (d.data_venda && d.data_venda.length>=7) ? d.data_venda.slice(0,7) : 'sem-data';
+    if(!mensalMap[key]) mensalMap[key] = {receita:0, comissoes:0, comissaoDC:0};
+    mensalMap[key].receita += comissaoAgencia(d);
+    mensalMap[key].comissoes += valorAngariador(d) + valorVendedor(d);
+    mensalMap[key].comissaoDC += valorDcAngariador(d) + valorDcVendedor(d);
+  });
+  const mesesOrdenados = Object.keys(mensalMap).filter(k=>k!=='sem-data').sort();
+  if(mensalMap['sem-data']) mesesOrdenados.push('sem-data');
+
+  document.getElementById('tbl-mensal').innerHTML = mesesOrdenados.map(k=>{
+    const m = mensalMap[k];
+    const liquido = m.receita - m.comissoes - m.comissaoDC;
+    return `<tr><td>${esc(formatMes(k))}</td><td class="num">${eur(m.receita)}</td><td class="num">${eur(m.comissoes)}</td><td class="num">${eur(m.comissaoDC)}</td><td class="num">${eur(liquido)}</td></tr>`;
+  }).join('') || '<tr><td colspan="5" class="empty">Sem vendas registadas</td></tr>';
+
+  document.getElementById('tbl-mensal-total').innerHTML = mesesOrdenados.length
+    ? `<tr><td>Total (Desde Sempre)</td><td class="num">${eur(receita)}</td><td class="num">${eur(comissoesPagasTotal)}</td><td class="num">${eur(comissaoDCTotal)}</td><td class="num">${eur(liquidoTotal)}</td></tr>`
+    : '';
+
+  drawChart('chartMensal','bar',{
+    labels: mesesOrdenados.map(formatMes),
+    datasets:[
+      {label:'Receita Agência (€)', data: mesesOrdenados.map(k=>Math.round(mensalMap[k].receita*100)/100), backgroundColor:'#9c1c2e'},
+      {label:'Comissões Pagas a Comerciais (€)', data: mesesOrdenados.map(k=>Math.round(mensalMap[k].comissoes*100)/100), backgroundColor:'#c0263b'},
+      {label:'Comissão Direção Comercial (€)', data: mesesOrdenados.map(k=>Math.round(mensalMap[k].comissaoDC*100)/100), backgroundColor:'#b45309'}
+    ]
+  });
+
+  // Conversao por origem
+  const origemStats = origensList.map(o=>{
+    const ang = deals.filter(d=>d.origem===o.nome);
+    const ven = ang.filter(d=>d.status==='Vendido');
+    return {origem:o.nome, angariados:ang.length, vendidos:ven.length, taxa: ang.length? ven.length/ang.length : 0};
+  });
+  document.getElementById('tbl-origem').innerHTML = origemStats.map(s=>
+    `<tr><td>${esc(s.origem)}</td><td class="num">${s.angariados}</td><td class="num">${s.vendidos}</td><td class="num">${pct(s.taxa)}</td></tr>`
+  ).join('') || '<tr><td colspan="4" class="empty">Sem dados</td></tr>';
+
+  // Comissoes por Comercial
+  const agenteStats = comerciaisTodos().map(f=>{
+    const angariacoes = deals.filter(d=>d.angariador_id===f.id).length;
+    const vendas = deals.filter(d=>d.vendedor_id===f.id && d.status==='Vendido').length;
+    let comissao = 0;
+    vendidos.forEach(d=>{
+      if(d.angariador_id===f.id) comissao += valorAngariador(d);
+      if(d.vendedor_id===f.id) comissao += valorVendedor(d);
+    });
+    return {nome:f.nome, angariacoes, vendas, comissao};
+  });
+  document.getElementById('tbl-agentes').innerHTML = agenteStats.map(s=>
+    `<tr><td>${esc(s.nome)}</td><td class="num">${s.angariacoes}</td><td class="num">${s.vendas}</td><td class="num">${eur(s.comissao)}</td></tr>`
+  ).join('') || '<tr><td colspan="4" class="empty">Sem dados</td></tr>';
+
+  // Comissoes por Direção Comercial
+  const dcStats = diretoresTodos().map(f=>{
+    let angariacoes = 0, vendas = 0, comissaoAng = 0, comissaoVen = 0;
+    vendidos.forEach(d=>{
+      if(d.dc_angariador_id===f.id){ angariacoes++; comissaoAng += valorDcAngariador(d); }
+      if(d.dc_vendedor_id===f.id){ vendas++; comissaoVen += valorDcVendedor(d); }
+    });
+    return {nome:f.nome, angariacoes, vendas, comissaoAng, comissaoVen, comissaoTotal: comissaoAng + comissaoVen};
+  });
+  document.getElementById('tbl-dc').innerHTML = dcStats.map(s=>
+    `<tr><td>${esc(s.nome)}</td><td class="num">${s.angariacoes}</td><td class="num">${eur(s.comissaoAng)}</td><td class="num">${s.vendas}</td><td class="num">${eur(s.comissaoVen)}</td><td class="num">${eur(s.comissaoTotal)}</td></tr>`
+  ).join('') || '<tr><td colspan="6" class="empty">Sem dados</td></tr>';
+
+  // Charts
+  drawChart('chartAgentes','bar',{
+    labels: agenteStats.map(s=>s.nome),
+    datasets:[{label:'Comissão (€)', data: agenteStats.map(s=>Math.round(s.comissao*100)/100), backgroundColor:'#9c1c2e'}]
+  });
+  drawChart('chartDC','bar',{
+    labels: dcStats.map(s=>s.nome),
+    datasets:[
+      {label:'Comissão Angariação (€)', data: dcStats.map(s=>Math.round(s.comissaoAng*100)/100), backgroundColor:'#15803d'},
+      {label:'Comissão Venda (€)', data: dcStats.map(s=>Math.round(s.comissaoVen*100)/100), backgroundColor:'#b45309'}
+    ]
+  });
+  drawChart('chartOrigem','bar',{
+    labels: origemStats.map(s=>s.origem),
+    datasets:[
+      {label:'Angariados', data: origemStats.map(s=>s.angariados), backgroundColor:'#d8b4be'},
+      {label:'Vendidos', data: origemStats.map(s=>s.vendidos), backgroundColor:'#9c1c2e'}
+    ]
+  });
+  drawChart('chartFunil','bar',{
+    labels:['Visitas Marcadas','Visitas Realizadas','Vendas'],
+    datasets:[{label:'Total', data:[visitasMarc, visitasReal, totalVendas], backgroundColor:['#d8b4be','#c0263b','#15803d']}]
+  },{plugins:{legend:{display:false}}});
+  const origemVendasNonZero = origemStats.filter(s=>s.vendidos>0);
+  drawChart('chartOrigemPie','doughnut',{
+    labels: origemVendasNonZero.map(s=>s.origem),
+    datasets:[{data: origemVendasNonZero.map(s=>s.vendidos), backgroundColor:['#9c1c2e','#c0263b','#b45309','#15803d','#74121f','#d8b4be','#8a7479']}]
+  });
+}
+
+function drawChart(canvasId, type, data, extra){
+  const ctx = document.getElementById(canvasId);
+  if(charts[canvasId]) charts[canvasId].destroy();
+  charts[canvasId] = new Chart(ctx, {
+    type, data,
+    options: Object.assign({responsive:true, maintainAspectRatio:false}, extra||{})
+  });
+}
+
+// ---------- Init ----------
+(async ()=>{
+  const auth = await requireAuth();
+  if(!auth) return;
+  renderTopbar('comercial', auth.profile);
+  canEdit = auth.profile.role !== 'viewer';
+
+  if(!canEdit){
+    document.getElementById('form-card').style.display = 'none';
+    document.getElementById('origens-add-row').style.display = 'none';
+  }
+
+  await loadAll();
+  fillSelects();
+  renderNegocios();
+  renderDefinicoes();
+  renderDashboard();
+})();
+</script>
+</body>
+</html>
