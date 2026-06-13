@@ -17,13 +17,25 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
    - Se não existir, redireciona para a página de login.
    - Se existir, devolve { session, profile } (profile = linha de public.profiles).
    ---------------------------------------------------------------------- */
-async function requireAuth(){
+async function requireAuth(opts){
+  opts = opts || {};
+  const allowPending = !!opts.allowPending;
+
   const { data: { session } } = await supabaseClient.auth.getSession();
   if(!session){
     window.location.href = 'index.html';
     return null;
   }
   const profile = await getOwnProfile(session.user.id, session.user.email);
+
+  if(profile.role === 'pendente' && !allowPending){
+    window.location.href = 'pendente.html';
+    return null;
+  }
+  if(profile.role !== 'pendente' && allowPending){
+    window.location.href = 'home.html';
+    return null;
+  }
   return { session, profile };
 }
 
@@ -38,8 +50,9 @@ async function getOwnProfile(userId, email){
     .eq('id', userId)
     .single();
   if(error || !data){
-    // Perfil ainda não criado (raro - trigger pode demorar um instante)
-    return { id: userId, full_name: email, email, role: 'viewer' };
+    // Perfil ainda não criado (raro - trigger pode demorar um instante).
+    // Por segurança, trata como pendente até o perfil existir.
+    return { id: userId, full_name: email, email, role: 'pendente' };
   }
   return data;
 }
@@ -67,7 +80,7 @@ function renderTopbar(activePage, profile){
     { key:'comercial', href:'comercial.html', label:'Gestão Comercial' },
     { key:'rh', href:'rh.html', label:'Recursos Humanos' }
   ];
-  if(profile && profile.role === 'admin'){
+  if(profile && (profile.role === 'admin' || profile.role === 'editor')){
     links.push({ key:'utilizadores', href:'utilizadores.html', label:'Utilizadores e Permissões' });
   }
 
@@ -76,7 +89,7 @@ function renderTopbar(activePage, profile){
     return `<a href="${l.href}" style="${isActive ? 'background:rgba(255,255,255,.28)' : ''}">${l.label}</a>`;
   }).join('') + `<button id="btn-logout" type="button">Sair</button>`;
 
-  const roleLabels = { admin:'Administrador', editor:'Editor', viewer:'Consulta' };
+  const roleLabels = { admin:'SuperAdmin', editor:'Gestor', viewer:'Comercial', diretor_comercial:'Diretor Comercial', pendente:'Pendente' };
   const name = (profile && (profile.full_name || profile.email)) || '';
   const roleLabel = (profile && roleLabels[profile.role]) || '';
 
