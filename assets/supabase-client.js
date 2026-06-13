@@ -78,7 +78,8 @@ function renderTopbar(activePage, profile){
   const links = [
     { key:'home', href:'home.html', label:'Início' },
     { key:'comercial', href:'comercial.html', label:'Gestão Comercial' },
-    { key:'rh', href:'rh.html', label:'Recursos Humanos' }
+    { key:'rh', href:'rh.html', label:'Recursos Humanos' },
+    { key:'clientes', href:'clientes.html', label:'Clientes' }
   ];
   if(profile && (profile.role === 'admin' || profile.role === 'editor')){
     links.push({ key:'utilizadores', href:'utilizadores.html', label:'Utilizadores e Permissões' });
