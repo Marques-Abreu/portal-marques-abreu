@@ -267,7 +267,7 @@ function renderFuncionarios(){
   const auth = await requireAuth();
   if(!auth) return;
   renderTopbar('rh', auth.profile);
-  canEdit = auth.profile.role !== 'viewer';
+  canEdit = true; // Gestor e SuperAdmin têm sempre acesso total de edição
 
   if(!canEdit){
     document.getElementById('form-card').style.display = 'none';

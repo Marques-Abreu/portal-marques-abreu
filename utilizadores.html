@@ -20,9 +20,7 @@
   <h2>Níveis de Acesso</h2>
   <p class="note">
     <b>SuperAdmin</b> — acesso total, incluindo gestão de utilizadores e permissões.<br>
-    <b>Gestor</b> — permissão total: pode criar, editar e eliminar registos em Gestão Comercial e Recursos Humanos, e aprovar novas contas.<br>
-    <b>Comercial</b> — apenas visualização, sem possibilidade de alterar dados.<br>
-    <b>Diretor Comercial</b> — apenas visualização, incluindo as métricas de avaliação da Gestão Comercial.<br>
+    <b>Gestor</b> — acesso total de visualização e edição em todos os módulos, e aprovação de novas contas.<br>
     <b>Pendente</b> — conta recém-criada, sem qualquer acesso até ser aprovada.
   </p>
   <p class="note">Quando uma pessoa cria conta no portal, fica com o estado "Pendente" (sem acesso) até um <b>SuperAdmin</b> ou <b>Gestor</b> aprovar a conta e atribuir-lhe uma permissão aqui.</p>
@@ -80,8 +78,6 @@ function renderUtilizadores(){
         <option value="pendente" ${p.role==='pendente'?'selected':''}>Pendente (sem acesso)</option>
         <option value="admin" ${p.role==='admin'?'selected':''}>SuperAdmin</option>
         <option value="editor" ${p.role==='editor'?'selected':''}>Gestor</option>
-        <option value="viewer" ${p.role==='viewer'?'selected':''}>Comercial</option>
-        <option value="diretor_comercial" ${p.role==='diretor_comercial'?'selected':''}>Diretor Comercial</option>
       </select>
       ${isSelf ? '<span class="note">(a tua conta)</span>' : ''}
     `;
