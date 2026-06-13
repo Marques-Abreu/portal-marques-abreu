@@ -96,12 +96,13 @@ function eur(v){
 
 // ---------- Modal ----------
 let modalConfirmCb = null;
-function openModal(title, bodyHtml, onConfirm, confirmText, showCancel){
+function openModal(title, bodyHtml, onConfirm, confirmText, showCancel, wide){
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-body').innerHTML = bodyHtml;
   document.getElementById('modal-confirm').textContent = confirmText || 'Confirmar';
   document.getElementById('modal-cancel').style.display = (showCancel===false) ? 'none' : 'inline-block';
   modalConfirmCb = onConfirm;
+  document.querySelector('#modal-overlay .modal-box').classList.toggle('modal-wide', !!wide);
   document.getElementById('modal-overlay').classList.remove('hidden');
 }
 function closeModal(){
@@ -221,7 +222,7 @@ async function verNegocios(id){
     </table></div>`;
   }
 
-  openModal(`Negócios de ${esc(c.nome)}`, bodyHtml, null, 'Fechar', false);
+  openModal(`Negócios de ${esc(c.nome)}`, bodyHtml, null, 'Fechar', false, true);
 }
 
 // ---------- Tabela ----------

@@ -12,10 +12,15 @@
 <div id="topbar" class="topbar"></div>
 
 <div class="page-wrap">
-  <h1>Portal do Colaborador</h1>
+  <h1>Portal</h1>
   <p class="subtitle">Marques &amp; Abreu — escolhe um módulo</p>
 
   <div class="module-grid" id="module-grid"></div>
+
+  <div class="card" id="aniversarios-card" style="display:none">
+    <h2>🎂 Aniversários a Chegar</h2>
+    <div id="aniversarios-list"></div>
+  </div>
 </div>
 
 <script src="assets/supabase-client.js"></script>
@@ -57,6 +62,34 @@
       <p>${m.desc}</p>
     </a>
   `).join('');
+
+  // ---------- Aviso de aniversários ----------
+  const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const { data: funcionarios } = await supabaseClient.from('funcionarios').select('nome, data_nascimento').eq('ativo', true);
+  const hoje = new Date();
+  hoje.setHours(0,0,0,0);
+  const proximos = (funcionarios || []).map(f=>{
+    if(!f.data_nascimento) return null;
+    const nasc = new Date(f.data_nascimento + 'T00:00:00');
+    if(isNaN(nasc.getTime())) return null;
+    let prox = new Date(hoje.getFullYear(), nasc.getMonth(), nasc.getDate());
+    if(prox < hoje) prox = new Date(hoje.getFullYear()+1, nasc.getMonth(), nasc.getDate());
+    const dias = Math.round((prox - hoje) / 86400000);
+    return { nome: f.nome, dias, data: nasc };
+  }).filter(x => x && x.dias >= 0 && x.dias <= 7)
+    .sort((a,b)=>a.dias-b.dias);
+
+  if(proximos.length){
+    document.getElementById('aniversarios-card').style.display = 'block';
+    document.getElementById('aniversarios-list').innerHTML = proximos.map(p=>{
+      const dataFmt = `${String(p.data.getDate()).padStart(2,'0')}/${String(p.data.getMonth()+1).padStart(2,'0')}`;
+      let quando;
+      if(p.dias===0) quando = 'é hoje! 🎉';
+      else if(p.dias===1) quando = 'é amanhã';
+      else quando = `faltam ${p.dias} dias`;
+      return `<div class="visit-row">🎂 <b>${esc(p.nome)}</b> — aniversário a ${dataFmt} (${quando})</div>`;
+    }).join('');
+  }
 })();
 </script>
 </body>
