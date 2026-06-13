@@ -17,7 +17,7 @@
 
   <div class="module-grid" id="module-grid"></div>
 
-  <div class="card" id="aniversarios-card" style="display:none">
+  <div class="card aniversarios-card" id="aniversarios-card" style="display:none">
     <h2>🎂 Aniversários a Chegar</h2>
     <div id="aniversarios-list"></div>
   </div>
@@ -75,7 +75,8 @@
     let prox = new Date(hoje.getFullYear(), nasc.getMonth(), nasc.getDate());
     if(prox < hoje) prox = new Date(hoje.getFullYear()+1, nasc.getMonth(), nasc.getDate());
     const dias = Math.round((prox - hoje) / 86400000);
-    return { nome: f.nome, dias, data: nasc };
+    const idade = prox.getFullYear() - nasc.getFullYear();
+    return { nome: f.nome, dias, data: nasc, idade };
   }).filter(x => x && x.dias >= 0 && x.dias <= 7)
     .sort((a,b)=>a.dias-b.dias);
 
@@ -87,7 +88,7 @@
       if(p.dias===0) quando = 'é hoje! 🎉';
       else if(p.dias===1) quando = 'é amanhã';
       else quando = `faltam ${p.dias} dias`;
-      return `<div class="visit-row">🎂 <b>${esc(p.nome)}</b> — aniversário a ${dataFmt} (${quando})</div>`;
+      return `<div class="visit-row">🎂 <b>${esc(p.nome)}</b> — aniversário a ${dataFmt}, vai fazer ${p.idade} anos (${quando})</div>`;
     }).join('');
   }
 })();
