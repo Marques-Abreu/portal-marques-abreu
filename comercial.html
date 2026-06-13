@@ -323,6 +323,11 @@ function formatMes(ym){
 
 function comerciaisAtivos(){ return funcionarios.filter(f=>f.cargo==='Comercial' && f.ativo); }
 function diretoresAtivos(){ return funcionarios.filter(f=>f.cargo==='Diretor Comercial' && f.ativo); }
+function angariadoresVendedoresAtivos(){
+  return funcionarios
+    .filter(f=>(f.cargo==='Comercial' || f.cargo==='Diretor Comercial') && f.ativo)
+    .sort((a,b)=>a.nome.localeCompare(b.nome));
+}
 function comerciaisTodos(){ return funcionarios.filter(f=>f.cargo==='Comercial'); }
 function diretoresTodos(){ return funcionarios.filter(f=>f.cargo==='Diretor Comercial'); }
 function nomeFunc(id){
@@ -393,7 +398,7 @@ function fillSelects(){
 
   origemSel.innerHTML = origensList.map(o=>`<option value="${esc(o.nome)}">${esc(o.nome)}</option>`).join('');
 
-  const agentOptions = '<option value="">—</option>' + comerciaisAtivos().map(a=>`<option value="${a.id}">${esc(a.nome)}</option>`).join('');
+  const agentOptions = '<option value="">—</option>' + angariadoresVendedoresAtivos().map(a=>`<option value="${a.id}">${esc(a.nome)}</option>`).join('');
   angSel.innerHTML = agentOptions;
   vendSel.innerHTML = agentOptions;
 
@@ -666,7 +671,7 @@ function renderDashboard(){
     labels: mesesOrdenados.map(formatMes),
     datasets:[
       {label:'Receita Agência (€)', data: mesesOrdenados.map(k=>Math.round(mensalMap[k].receita*100)/100), backgroundColor:'#9c1c2e'},
-      {label:'Comissões Pagas a Comerciais (€)', data: mesesOrdenados.map(k=>Math.round(mensalMap[k].comissoes*100)/100), backgroundColor:'#c0263b'},
+      {label:'Comissões Pagas a Comerciais (€)', data: mesesOrdenados.map(k=>Math.round(mensalMap[k].comissoes*100)/100), backgroundColor:'#2563a8'},
       {label:'Comissão Direção Comercial (€)', data: mesesOrdenados.map(k=>Math.round(mensalMap[k].comissaoDC*100)/100), backgroundColor:'#b45309'}
     ]
   });
